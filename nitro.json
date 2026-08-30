@@ -1,0 +1,23 @@
+{
+  "cxxNamespace": ["fasthtmlparser"],
+  "ios": {
+    "iosModuleName": "FastHtmlParser"
+  },
+  "android": {
+    "androidNamespace": ["fasthtmlparser"],
+    "androidCxxLibName": "fasthtmlparser"
+  },
+  "autolinking": {
+    "FastHtmlParser": {
+      "ios": {
+        "language": "swift",
+        "implementationClassName": "FastHtmlParser"
+      },
+      "android": {
+        "language": "kotlin",
+        "implementationClassName": "FastHtmlParser"
+      }
+    }
+  },
+  "ignorePaths": ["node_modules"]
+}

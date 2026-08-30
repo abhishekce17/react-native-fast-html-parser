@@ -17,7 +17,7 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: aarch64-apple-ios,aarch64-apple-ios-sim,x86_64-apple-ios
+          targets: aarch64-apple-ios,aarch64-apple-ios-sim
 
       - name: Cache Rust
         uses: actions/cache@v4
@@ -34,22 +34,15 @@ jobs:
       - name: Build for iOS Simulator (aarch64-apple-ios-sim)
         run: cargo build --manifest-path rust/Cargo.toml --target aarch64-apple-ios-sim --release
 
-      - name: Build for iOS Simulator (x86_64-apple-ios)
-        run: cargo build --manifest-path rust/Cargo.toml --target x86_64-apple-ios --release
-
       - name: Strip debug symbols
         run: |
           strip -S rust/target/aarch64-apple-ios/release/libhtml_2_json.a
           strip -S rust/target/aarch64-apple-ios-sim/release/libhtml_2_json.a
-          strip -S rust/target/x86_64-apple-ios/release/libhtml_2_json.a
 
       - name: Copy and merge artifacts
         run: |
           cp rust/target/aarch64-apple-ios/release/libhtml_2_json.a libhtml_2_json-ios-device.a
-          lipo -create \
-            rust/target/aarch64-apple-ios-sim/release/libhtml_2_json.a \
-            rust/target/x86_64-apple-ios/release/libhtml_2_json.a \
-            -output libhtml_2_json-ios-sim.a
+          cp rust/target/aarch64-apple-ios-sim/release/libhtml_2_json.a libhtml_2_json-ios-sim.a
 
       - name: Upload iOS artifacts
         uses: actions/upload-artifact@v4

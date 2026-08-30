@@ -94,7 +94,6 @@ function download(url, destPath) {
           },
           function (res) {
             if (res.statusCode === 301 || res.statusCode === 302) {
-              file.close();
               return get(res.headers.location);
             }
             if (res.statusCode !== 200) {

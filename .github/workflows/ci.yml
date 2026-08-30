@@ -190,6 +190,10 @@ jobs:
             rust/target/aarch64-apple-ios-sim/release/libhtml_2_json.a \
             rust/target/x86_64-apple-ios/release/libhtml_2_json.a \
             -output ios/libs/sim/libhtml_2_json.a
+          xcodebuild -create-xcframework \
+            -library ios/libs/device/libhtml_2_json.a \
+            -library ios/libs/sim/libhtml_2_json.a \
+            -output ios/libs/libhtml_2_json.xcframework
 
       - name: Cache turborepo for iOS
         uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3

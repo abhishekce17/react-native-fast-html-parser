@@ -27,4 +27,10 @@ Pod::Spec.new do |s|
   add_nitrogen_files(s)
 
   install_modules_dependencies(s)
+
+  # Force C++17 standard to prevent Fabric compiler standard mismatches
+  s.attributes_hash["pod_target_xcconfig"] ||= {}
+  s.attributes_hash["pod_target_xcconfig"]["CLANG_CXX_LANGUAGE_STANDARD"] = "c++17"
+  s.attributes_hash["user_target_xcconfig"] ||= {}
+  s.attributes_hash["user_target_xcconfig"]["CLANG_CXX_LANGUAGE_STANDARD"] = "c++17"
 end

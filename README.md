@@ -1,6 +1,6 @@
 # react-native-fast-html-parser
 
-A high-performance, zero-copy HTML-to-structured-JSON parser library for React Native. Powered by a lightning-fast Rust core engine (`html_2_json`) and integrated via direct C++ JSI using Margelo Nitro Modules.
+A high-performance, zero-copy HTML-to-structured-JSON parser library for React Native. Powered by a lightning-fast Rust core engine and integrated via direct C++ JSI using Margelo Nitro Modules.
 
 It achieves pure zero-copy shared-memory access on-device. This avoids standard string/JSON serialization overhead and Hermes garbage collection pauses during render loops.
 

@@ -113,11 +113,17 @@ function download(url, destPath) {
             }
             res.pipe(file);
             file.on('finish', function () {
-              file.close(function() {
+              file.close(function () {
                 const stat = fs.statSync(destPath);
                 if (stat.size === 0) {
-                  try { fs.unlinkSync(destPath); } catch {}
-                  return reject(new Error('Downloaded file is empty: ' + path.basename(destPath)));
+                  try {
+                    fs.unlinkSync(destPath);
+                  } catch {}
+                  return reject(
+                    new Error(
+                      'Downloaded file is empty: ' + path.basename(destPath)
+                    )
+                  );
                 }
                 resolve();
               });

@@ -31,7 +31,8 @@
     "!**/__tests__",
     "!**/__fixtures__",
     "!**/__mocks__",
-    "!**/.*"
+    "!**/.*",
+    "scripts"
   ],
   "scripts": {
     "example": "yarn workspace react-native-fast-html-parser-example",
@@ -40,7 +41,8 @@
     "nitrogen": "nitrogen",
     "typecheck": "tsc",
     "test": "jest",
-    "lint": "eslint \"**/*.{js,ts,tsx}\""
+    "lint": "eslint \"**/*.{js,ts,tsx}\"",
+    "postinstall": "node scripts/postinstall.js"
   },
   "keywords": [
     "react-native",

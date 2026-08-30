@@ -30,6 +30,22 @@ def reactNativeArchitectures() {
   return value ? value.split(",") : ["armeabi-v7a", "x86", "x86_64", "arm64-v8a"]
 }
 
+
+// Build the Rust library from source before the native build
+task buildRust(type: Exec) {
+  description = 'Compiles the Rust html_2_json library for all Android ABIs'
+  commandLine 'cargo', 'ndk',
+    '-t', 'arm64-v8a',
+    '-t', 'armeabi-v7a',
+    '-t', 'x86',
+    '-t', 'x86_64',
+    '-o', 'src/main/jniLibs',
+    'build', '--release'
+  workingDir '../rust'
+}
+
+preBuild.dependsOn buildRust
+
 apply plugin: "com.android.library"
 apply plugin: "kotlin-android"
 apply from: '../nitrogen/generated/android/fasthtmlparser+autolinking.gradle'

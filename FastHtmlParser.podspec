@@ -14,12 +14,10 @@ Pod::Spec.new do |s|
   s.source       = { :git => "https://github.com/abhishekce17/react-native-fast-html-parser.git", :tag => "#{s.version}" }
 
   s.source_files = [
-    "ios/**/*.{swift}",
     "ios/**/*.{m,mm}",
     "cpp/**/*.{hpp,cpp}",
   ]
 
-  # Target XCConfig to resolve and link the precompiled Rust static library
   s.pod_target_xcconfig = {
     'LIBRARY_SEARCH_PATHS[sdk=iphonesimulator*]' => '$(PODS_TARGET_SRCROOT)/ios/libs/sim',
     'LIBRARY_SEARCH_PATHS[sdk=iphoneos*]' => '$(PODS_TARGET_SRCROOT)/ios/libs/device',

@@ -1,0 +1,19 @@
+[package]
+name = "html_2_json"
+version = "0.1.0"
+edition = "2024"
+description = "Parse arbitrary HTML into a structured, serialisable JSON tree"
+keywords = ["html", "parser", "json", "scraper", "content"]
+categories = ["parsing", "web-programming", "encoding"]
+
+[lib]
+name = "html_2_json"
+crate-type = ["staticlib", "cdylib", "rlib"]
+path = "src/lib.rs"
+
+[dependencies]
+scraper = "0.27.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+ego-tree = "0.11.0"
+phf = { version = "0.11", features = ["macros"] }

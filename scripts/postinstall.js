@@ -159,6 +159,53 @@ async function main() {
     }
   }
 
+  // Assemble iOS XCFramework on macOS machines
+  if (process.platform === 'darwin') {
+    const xcframeworkPath = path.join(
+      PKG_ROOT,
+      'ios',
+      'libs',
+      'libhtml_2_json.xcframework'
+    );
+    if (!fs.existsSync(xcframeworkPath)) {
+      console.log('  ⚙ Assembling iOS XCFramework...');
+      const devicePath = path.join(
+        PKG_ROOT,
+        'ios',
+        'libs',
+        'device',
+        'libhtml_2_json.a'
+      );
+      const simPath = path.join(
+        PKG_ROOT,
+        'ios',
+        'libs',
+        'sim',
+        'libhtml_2_json.a'
+      );
+
+      try {
+        const { execSync } = require('child_process');
+        execSync(
+          'xcodebuild -create-xcframework -library "' +
+            devicePath +
+            '" -library "' +
+            simPath +
+            '" -output "' +
+            xcframeworkPath +
+            '"',
+          { stdio: 'ignore' }
+        );
+        console.log('  ✓ XCFramework assembled successfully.');
+      } catch (err) {
+        console.error('  ✗ Failed to assemble XCFramework: ' + err.message);
+        failed = true;
+      }
+    } else {
+      console.log('  ✓ XCFramework already exists.');
+    }
+  }
+
   if (failed) {
     console.error(
       [

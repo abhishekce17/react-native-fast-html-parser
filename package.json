@@ -1,6 +1,6 @@
 {
   "name": "react-native-fast-html-parser",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "A lightning-fast HTML parser library for React Native that converts raw HTML fragments into a structured JSON AST tree. Built on a high-performance Rust core and integrated via direct C++ JSI HostObjects, it achieves pure zero-copy shared-memory access on-device. This avoids standard string/JSON serialization overhead and Hermes garbage collection pauses during render loops.",
   "main": "./lib/module/index.js",
   "types": "./lib/typescript/src/index.d.ts",

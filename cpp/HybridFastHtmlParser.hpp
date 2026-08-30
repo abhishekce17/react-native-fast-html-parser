@@ -183,6 +183,7 @@ public:
 
     double getChildCount() override;
     std::variant<std::shared_ptr<HybridInlineNodeSpec>, NullType> getChild(double index) override;
+    double getQuoteChildCount() override;
     std::variant<std::shared_ptr<HybridContentBlockSpec>, NullType> getQuoteChild(double index) override;
 
     bool getOrdered() override;
@@ -192,6 +193,7 @@ public:
     double getRowCount() override;
     std::variant<std::shared_ptr<HybridTableRowSpec>, NullType> getRow(double index) override;
 
+    double getDefItemCount() override;
     std::variant<std::shared_ptr<HybridDefinitionItemSpec>, NullType> getDefItem(double index) override;
 };
 

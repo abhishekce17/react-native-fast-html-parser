@@ -58,6 +58,7 @@ export interface ContentBlock extends HybridObject<{
 
   readonly childCount: number;
   getChild(index: number): InlineNode | null;
+  readonly quoteChildCount: number;
   getQuoteChild(index: number): ContentBlock | null;
 
   readonly ordered: boolean;
@@ -67,6 +68,7 @@ export interface ContentBlock extends HybridObject<{
   readonly rowCount: number;
   getRow(index: number): TableRow | null;
 
+  readonly defItemCount: number;
   getDefItem(index: number): DefinitionItem | null;
 }
 

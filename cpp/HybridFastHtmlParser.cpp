@@ -121,6 +121,9 @@ std::variant<std::shared_ptr<HybridInlineNodeSpec>, NullType> HybridContentBlock
     if (!child) return nullptr;
     return std::make_shared<HybridInlineNode>(m_root, child);
 }
+double HybridContentBlock::getQuoteChildCount() {
+    return (double)get_quote_child_count(m_block);
+}
 std::variant<std::shared_ptr<HybridContentBlockSpec>, NullType> HybridContentBlock::getQuoteChild(double index) {
     const ContentBlock* child = get_quote_child_by_index(m_block, (size_t)index);
     if (!child) return nullptr;
@@ -147,6 +150,9 @@ std::variant<std::shared_ptr<HybridTableRowSpec>, NullType> HybridContentBlock::
     const TableRow* row = get_table_row_by_index(m_block, (size_t)index);
     if (!row) return nullptr;
     return std::make_shared<HybridTableRow>(m_root, row);
+}
+double HybridContentBlock::getDefItemCount() {
+    return (double)get_def_list_item_count(m_block);
 }
 std::variant<std::shared_ptr<HybridDefinitionItemSpec>, NullType> HybridContentBlock::getDefItem(double index) {
     const DefinitionItem* item = get_def_list_item_by_index(m_block, (size_t)index);

@@ -193,11 +193,15 @@ fn collect_text_recursive(node: NodeRef<Node>, acc: &mut String) {
         match child.value() {
             Node::Text(t) => acc.push_str(&t),
             Node::Element(el) => {
-                // Skip non-content noise inside code blocks
-                if matches!(el.name(), "script" | "style" | "svg") {
-                    continue;
+                if el.name() == "br" {
+                    acc.push('\n');
+                } else {
+                    // Skip non-content noise inside code blocks
+                    if matches!(el.name(), "script" | "style" | "svg") {
+                        continue;
+                    }
+                    collect_text_recursive(child, acc);
                 }
-                collect_text_recursive(child, acc);
             }
             _ => {}
         }

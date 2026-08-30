@@ -10,12 +10,12 @@
   "autolinking": {
     "FastHtmlParser": {
       "ios": {
-        "language": "swift",
-        "implementationClassName": "FastHtmlParser"
+        "language": "c++",
+        "implementationClassName": "HybridFastHtmlParser"
       },
       "android": {
-        "language": "kotlin",
-        "implementationClassName": "FastHtmlParser"
+        "language": "c++",
+        "implementationClassName": "HybridFastHtmlParser"
       }
     }
   },

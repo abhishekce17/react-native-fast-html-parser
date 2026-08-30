@@ -19,6 +19,13 @@ Pod::Spec.new do |s|
     "cpp/**/*.{hpp,cpp}",
   ]
 
+  # Target XCConfig to resolve and link the precompiled Rust static library
+  s.pod_target_xcconfig = {
+    'LIBRARY_SEARCH_PATHS[sdk=iphonesimulator*]' => '$(PODS_TARGET_SRCROOT)/ios/libs/sim',
+    'LIBRARY_SEARCH_PATHS[sdk=iphoneos*]' => '$(PODS_TARGET_SRCROOT)/ios/libs/device',
+    'OTHER_LDFLAGS' => '-lhtml_2_json'
+  }
+
   s.dependency 'React-jsi'
   s.dependency 'React-callinvoker'
 

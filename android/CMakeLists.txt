@@ -5,8 +5,17 @@ set(PACKAGE_NAME fasthtmlparser)
 set(CMAKE_VERBOSE_MAKEFILE ON)
 set(CMAKE_CXX_STANDARD 20)
 
-# Define C++ library and add all sources
-add_library(${PACKAGE_NAME} SHARED src/main/cpp/cpp-adapter.cpp)
+# Define C++ library and compile all sources
+add_library(${PACKAGE_NAME} SHARED
+    src/main/cpp/cpp-adapter.cpp
+    ../cpp/HybridFastHtmlParser.cpp
+)
+
+# Reference precompiled Rust dynamic library for current target ABI
+add_library(rust_html SHARED IMPORTED)
+set_target_properties(rust_html PROPERTIES IMPORTED_LOCATION
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/main/jniLibs/${ANDROID_ABI}/libhtml_2_json.so
+)
 
 # Add Nitrogen specs :)
 include(${CMAKE_SOURCE_DIR}/../nitrogen/generated/android/fasthtmlparser+autolinking.cmake)
@@ -21,4 +30,5 @@ target_link_libraries(
         ${PACKAGE_NAME}
         ${LOG_LIB}
         android # <-- Android core
+        rust_html # <-- Rust parser core
 )

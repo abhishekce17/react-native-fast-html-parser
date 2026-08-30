@@ -95,7 +95,7 @@ private:
     const InlineNode* m_node;
 public:
     HybridInlineNode(std::shared_ptr<HybridParsedArticle> root, const InlineNode* node)
-        : HybridInlineNodeSpec(), m_root(root), m_node(node) {}
+        : HybridObject("InlineNode"), HybridInlineNodeSpec(), m_root(root), m_node(node) {}
 
     std::string getType() override;
     std::string getText() override;
@@ -111,7 +111,7 @@ private:
     const DefinitionItem* m_item;
 public:
     HybridDefinitionItem(std::shared_ptr<HybridParsedArticle> root, const DefinitionItem* item)
-        : HybridDefinitionItemSpec(), m_root(root), m_item(item) {}
+        : HybridObject("DefinitionItem"), HybridDefinitionItemSpec(), m_root(root), m_item(item) {}
 
     double getTermCount() override;
     std::variant<std::shared_ptr<HybridInlineNodeSpec>, NullType> getTerm(double index) override;
@@ -126,7 +126,7 @@ private:
     const TableCell* m_cell;
 public:
     HybridTableCell(std::shared_ptr<HybridParsedArticle> root, const TableCell* cell)
-        : HybridTableCellSpec(), m_root(root), m_cell(cell) {}
+        : HybridObject("TableCell"), HybridTableCellSpec(), m_root(root), m_cell(cell) {}
 
     double getChildCount() override;
     std::variant<std::shared_ptr<HybridInlineNodeSpec>, NullType> getChild(double index) override;
@@ -139,7 +139,7 @@ private:
     const TableRow* m_row;
 public:
     HybridTableRow(std::shared_ptr<HybridParsedArticle> root, const TableRow* row)
-        : HybridTableRowSpec(), m_root(root), m_row(row) {}
+        : HybridObject("TableRow"), HybridTableRowSpec(), m_root(root), m_row(row) {}
 
     double getCellCount() override;
     std::variant<std::shared_ptr<HybridTableCellSpec>, NullType> getCell(double index) override;
@@ -152,7 +152,7 @@ private:
     const ListItem* m_item;
 public:
     HybridListItem(std::shared_ptr<HybridParsedArticle> root, const ListItem* item)
-        : HybridListItemSpec(), m_root(root), m_item(item) {}
+        : HybridObject("ListItem"), HybridListItemSpec(), m_root(root), m_item(item) {}
 
     double getChildCount() override;
     std::variant<std::shared_ptr<HybridInlineNodeSpec>, NullType> getChild(double index) override;
@@ -168,7 +168,7 @@ private:
     std::string m_type;
 public:
     HybridContentBlock(std::shared_ptr<HybridParsedArticle> root, const ContentBlock* block, std::string type)
-        : HybridContentBlockSpec(), m_root(root), m_block(block), m_type(type) {}
+        : HybridObject("ContentBlock"), HybridContentBlockSpec(), m_root(root), m_block(block), m_type(type) {}
 
     std::string getType() override;
     double getLevel() override;
@@ -201,7 +201,7 @@ class HybridParsedArticle : public HybridParsedArticleSpec {
 private:
     ParsedArticle* m_article;
 public:
-    HybridParsedArticle(const char* html) : HybridParsedArticleSpec() {
+    HybridParsedArticle(const char* html) : HybridObject("ParsedArticle"), HybridParsedArticleSpec() {
         m_article = parse_html_ffi(html);
     }
     ~HybridParsedArticle() {
@@ -216,7 +216,7 @@ public:
 // ── HybridFastHtmlParser ─────────────────────────────────────────────────────
 class HybridFastHtmlParser : public HybridFastHtmlParserSpec {
 public:
-    HybridFastHtmlParser() : HybridFastHtmlParserSpec() {}
+    HybridFastHtmlParser() : HybridObject("FastHtmlParser"), HybridFastHtmlParserSpec() {}
 
     std::variant<std::shared_ptr<HybridParsedArticleSpec>, NullType> parse(const std::string& html) override;
 };

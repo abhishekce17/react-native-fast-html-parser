@@ -9,8 +9,10 @@
 #include "HybridTableCellSpec.hpp"
 #include "HybridDefinitionItemSpec.hpp"
 
+#include <NitroModules/Null.hpp>
 #include <memory>
 #include <string>
+#include <variant>
 
 extern "C" {
     struct ParsedArticle;
@@ -75,6 +77,8 @@ extern "C" {
 
 namespace margelo::nitro::fasthtmlparser {
 
+using namespace margelo::nitro;
+
 inline std::string getStringAndFree(char* raw_str) {
     if (!raw_str) return "";
     std::string s(raw_str);
@@ -97,7 +101,7 @@ public:
     std::string getText() override;
     std::string getUrl() override;
     double getChildCount() override;
-    std::shared_ptr<HybridInlineNodeSpec> getChild(double index) override;
+    std::variant<std::shared_ptr<HybridInlineNodeSpec>, NullType> getChild(double index) override;
 };
 
 // ── HybridDefinitionItem ─────────────────────────────────────────────────────
@@ -110,9 +114,9 @@ public:
         : HybridDefinitionItemSpec(), m_root(root), m_item(item) {}
 
     double getTermCount() override;
-    std::shared_ptr<HybridInlineNodeSpec> getTerm(double index) override;
+    std::variant<std::shared_ptr<HybridInlineNodeSpec>, NullType> getTerm(double index) override;
     double getDefCount() override;
-    std::shared_ptr<HybridInlineNodeSpec> getDef(double index) override;
+    std::variant<std::shared_ptr<HybridInlineNodeSpec>, NullType> getDef(double index) override;
 };
 
 // ── HybridTableCell ──────────────────────────────────────────────────────────
@@ -125,7 +129,7 @@ public:
         : HybridTableCellSpec(), m_root(root), m_cell(cell) {}
 
     double getChildCount() override;
-    std::shared_ptr<HybridInlineNodeSpec> getChild(double index) override;
+    std::variant<std::shared_ptr<HybridInlineNodeSpec>, NullType> getChild(double index) override;
 };
 
 // ── HybridTableRow ───────────────────────────────────────────────────────────
@@ -138,7 +142,7 @@ public:
         : HybridTableRowSpec(), m_root(root), m_row(row) {}
 
     double getCellCount() override;
-    std::shared_ptr<HybridTableCellSpec> getCell(double index) override;
+    std::variant<std::shared_ptr<HybridTableCellSpec>, NullType> getCell(double index) override;
 };
 
 // ── HybridListItem ───────────────────────────────────────────────────────────
@@ -151,9 +155,9 @@ public:
         : HybridListItemSpec(), m_root(root), m_item(item) {}
 
     double getChildCount() override;
-    std::shared_ptr<HybridInlineNodeSpec> getChild(double index) override;
+    std::variant<std::shared_ptr<HybridInlineNodeSpec>, NullType> getChild(double index) override;
     double getNestedCount() override;
-    std::shared_ptr<HybridContentBlockSpec> getNested(double index) override;
+    std::variant<std::shared_ptr<HybridContentBlockSpec>, NullType> getNested(double index) override;
 };
 
 // ── HybridContentBlock ───────────────────────────────────────────────────────
@@ -178,21 +182,22 @@ public:
     std::string getTitle() override;
 
     double getChildCount() override;
-    std::shared_ptr<HybridInlineNodeSpec> getChild(double index) override;
-    std::shared_ptr<HybridContentBlockSpec> getQuoteChild(double index) override;
+    std::variant<std::shared_ptr<HybridInlineNodeSpec>, NullType> getChild(double index) override;
+    std::variant<std::shared_ptr<HybridContentBlockSpec>, NullType> getQuoteChild(double index) override;
 
     bool getOrdered() override;
     double getItemCount() override;
-    std::shared_ptr<HybridListItemSpec> getItem(double index) override;
+    std::variant<std::shared_ptr<HybridListItemSpec>, NullType> getItem(double index) override;
 
     double getRowCount() override;
-    std::shared_ptr<HybridTableRowSpec> getRow(double index) override;
+    std::variant<std::shared_ptr<HybridTableRowSpec>, NullType> getRow(double index) override;
 
-    std::shared_ptr<HybridDefinitionItemSpec> getDefItem(double index) override;
+    std::variant<std::shared_ptr<HybridDefinitionItemSpec>, NullType> getDefItem(double index) override;
 };
 
 // ── HybridParsedArticle ──────────────────────────────────────────────────────
-class HybridParsedArticle : public HybridParsedArticleSpec, public std::enable_shared_from_this<HybridParsedArticle> {
+// NOTE: do NOT add enable_shared_from_this here — HybridObject already inherits it.
+class HybridParsedArticle : public HybridParsedArticleSpec {
 private:
     ParsedArticle* m_article;
 public:
@@ -205,7 +210,7 @@ public:
     const ParsedArticle* getArticle() const { return m_article; }
 
     double getLength() override;
-    std::shared_ptr<HybridContentBlockSpec> getBlock(double index) override;
+    std::variant<std::shared_ptr<HybridContentBlockSpec>, NullType> getBlock(double index) override;
 };
 
 // ── HybridFastHtmlParser ─────────────────────────────────────────────────────
@@ -213,7 +218,7 @@ class HybridFastHtmlParser : public HybridFastHtmlParserSpec {
 public:
     HybridFastHtmlParser() : HybridFastHtmlParserSpec() {}
 
-    std::shared_ptr<HybridParsedArticleSpec> parse(const std::string& html) override;
+    std::variant<std::shared_ptr<HybridParsedArticleSpec>, NullType> parse(const std::string& html) override;
 };
 
 } // namespace margelo::nitro::fasthtmlparser

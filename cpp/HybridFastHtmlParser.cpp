@@ -15,7 +15,7 @@ std::string HybridInlineNode::getUrl() {
 double HybridInlineNode::getChildCount() {
     return (double)get_inline_node_child_count(m_node);
 }
-std::shared_ptr<HybridInlineNodeSpec> HybridInlineNode::getChild(double index) {
+std::variant<std::shared_ptr<HybridInlineNodeSpec>, NullType> HybridInlineNode::getChild(double index) {
     const InlineNode* child = get_inline_node_child_by_index(m_node, (size_t)index);
     if (!child) return nullptr;
     return std::make_shared<HybridInlineNode>(m_root, child);
@@ -25,7 +25,7 @@ std::shared_ptr<HybridInlineNodeSpec> HybridInlineNode::getChild(double index) {
 double HybridDefinitionItem::getTermCount() {
     return (double)get_def_item_term_count(m_item);
 }
-std::shared_ptr<HybridInlineNodeSpec> HybridDefinitionItem::getTerm(double index) {
+std::variant<std::shared_ptr<HybridInlineNodeSpec>, NullType> HybridDefinitionItem::getTerm(double index) {
     const InlineNode* child = get_def_item_term_by_index(m_item, (size_t)index);
     if (!child) return nullptr;
     return std::make_shared<HybridInlineNode>(m_root, child);
@@ -33,7 +33,7 @@ std::shared_ptr<HybridInlineNodeSpec> HybridDefinitionItem::getTerm(double index
 double HybridDefinitionItem::getDefCount() {
     return (double)get_def_item_def_count(m_item);
 }
-std::shared_ptr<HybridInlineNodeSpec> HybridDefinitionItem::getDef(double index) {
+std::variant<std::shared_ptr<HybridInlineNodeSpec>, NullType> HybridDefinitionItem::getDef(double index) {
     const InlineNode* child = get_def_item_def_by_index(m_item, (size_t)index);
     if (!child) return nullptr;
     return std::make_shared<HybridInlineNode>(m_root, child);
@@ -43,7 +43,7 @@ std::shared_ptr<HybridInlineNodeSpec> HybridDefinitionItem::getDef(double index)
 double HybridTableCell::getChildCount() {
     return (double)get_table_cell_child_count(m_cell);
 }
-std::shared_ptr<HybridInlineNodeSpec> HybridTableCell::getChild(double index) {
+std::variant<std::shared_ptr<HybridInlineNodeSpec>, NullType> HybridTableCell::getChild(double index) {
     const InlineNode* child = get_table_cell_child_by_index(m_cell, (size_t)index);
     if (!child) return nullptr;
     return std::make_shared<HybridInlineNode>(m_root, child);
@@ -53,7 +53,7 @@ std::shared_ptr<HybridInlineNodeSpec> HybridTableCell::getChild(double index) {
 double HybridTableRow::getCellCount() {
     return (double)get_table_row_cell_count(m_row);
 }
-std::shared_ptr<HybridTableCellSpec> HybridTableRow::getCell(double index) {
+std::variant<std::shared_ptr<HybridTableCellSpec>, NullType> HybridTableRow::getCell(double index) {
     const TableCell* cell = get_table_row_cell_by_index(m_row, (size_t)index);
     if (!cell) return nullptr;
     return std::make_shared<HybridTableCell>(m_root, cell);
@@ -63,7 +63,7 @@ std::shared_ptr<HybridTableCellSpec> HybridTableRow::getCell(double index) {
 double HybridListItem::getChildCount() {
     return (double)get_list_item_child_count(m_item);
 }
-std::shared_ptr<HybridInlineNodeSpec> HybridListItem::getChild(double index) {
+std::variant<std::shared_ptr<HybridInlineNodeSpec>, NullType> HybridListItem::getChild(double index) {
     const InlineNode* child = get_list_item_child_by_index(m_item, (size_t)index);
     if (!child) return nullptr;
     return std::make_shared<HybridInlineNode>(m_root, child);
@@ -71,7 +71,7 @@ std::shared_ptr<HybridInlineNodeSpec> HybridListItem::getChild(double index) {
 double HybridListItem::getNestedCount() {
     return (double)get_list_item_nested_count(m_item);
 }
-std::shared_ptr<HybridContentBlockSpec> HybridListItem::getNested(double index) {
+std::variant<std::shared_ptr<HybridContentBlockSpec>, NullType> HybridListItem::getNested(double index) {
     const ContentBlock* nested = get_list_item_nested_by_index(m_item, (size_t)index);
     if (!nested) return nullptr;
     char* raw_type = get_block_type_ptr(nested);
@@ -116,12 +116,12 @@ std::string HybridContentBlock::getTitle() {
 double HybridContentBlock::getChildCount() {
     return (double)get_block_child_count_ptr(m_block);
 }
-std::shared_ptr<HybridInlineNodeSpec> HybridContentBlock::getChild(double index) {
+std::variant<std::shared_ptr<HybridInlineNodeSpec>, NullType> HybridContentBlock::getChild(double index) {
     const InlineNode* child = get_block_child_by_index(m_block, (size_t)index);
     if (!child) return nullptr;
     return std::make_shared<HybridInlineNode>(m_root, child);
 }
-std::shared_ptr<HybridContentBlockSpec> HybridContentBlock::getQuoteChild(double index) {
+std::variant<std::shared_ptr<HybridContentBlockSpec>, NullType> HybridContentBlock::getQuoteChild(double index) {
     const ContentBlock* child = get_quote_child_by_index(m_block, (size_t)index);
     if (!child) return nullptr;
     char* raw_type = get_block_type_ptr(child);
@@ -135,7 +135,7 @@ bool HybridContentBlock::getOrdered() {
 double HybridContentBlock::getItemCount() {
     return (double)get_list_item_count(m_block);
 }
-std::shared_ptr<HybridListItemSpec> HybridContentBlock::getItem(double index) {
+std::variant<std::shared_ptr<HybridListItemSpec>, NullType> HybridContentBlock::getItem(double index) {
     const ListItem* item = get_list_item_by_index(m_block, (size_t)index);
     if (!item) return nullptr;
     return std::make_shared<HybridListItem>(m_root, item);
@@ -143,12 +143,12 @@ std::shared_ptr<HybridListItemSpec> HybridContentBlock::getItem(double index) {
 double HybridContentBlock::getRowCount() {
     return (double)get_table_row_count(m_block);
 }
-std::shared_ptr<HybridTableRowSpec> HybridContentBlock::getRow(double index) {
+std::variant<std::shared_ptr<HybridTableRowSpec>, NullType> HybridContentBlock::getRow(double index) {
     const TableRow* row = get_table_row_by_index(m_block, (size_t)index);
     if (!row) return nullptr;
     return std::make_shared<HybridTableRow>(m_root, row);
 }
-std::shared_ptr<HybridDefinitionItemSpec> HybridContentBlock::getDefItem(double index) {
+std::variant<std::shared_ptr<HybridDefinitionItemSpec>, NullType> HybridContentBlock::getDefItem(double index) {
     const DefinitionItem* item = get_def_list_item_by_index(m_block, (size_t)index);
     if (!item) return nullptr;
     return std::make_shared<HybridDefinitionItem>(m_root, item);
@@ -158,17 +158,20 @@ std::shared_ptr<HybridDefinitionItemSpec> HybridContentBlock::getDefItem(double 
 double HybridParsedArticle::getLength() {
     return (double)get_block_count(m_article);
 }
-std::shared_ptr<HybridContentBlockSpec> HybridParsedArticle::getBlock(double index) {
+std::variant<std::shared_ptr<HybridContentBlockSpec>, NullType> HybridParsedArticle::getBlock(double index) {
     const ContentBlock* block = get_block_by_index(m_article, (size_t)index);
     if (!block) return nullptr;
     char* raw_type = get_block_type_ptr(block);
     std::string t(raw_type);
     free_string_ffi(raw_type);
-    return std::make_shared<HybridContentBlock>(shared_from_this(), block, t);
+    
+    // Correctly query the shared_ptr to ourself via dynamic_pointer_cast from HybridObject's shared_from_this()
+    auto self = std::dynamic_pointer_cast<HybridParsedArticle>(shared_from_this());
+    return std::make_shared<HybridContentBlock>(self, block, t);
 }
 
 // ── HybridFastHtmlParser ─────────────────────────────────────────────────────
-std::shared_ptr<HybridParsedArticleSpec> HybridFastHtmlParser::parse(const std::string& html) {
+std::variant<std::shared_ptr<HybridParsedArticleSpec>, NullType> HybridFastHtmlParser::parse(const std::string& html) {
     return std::make_shared<HybridParsedArticle>(html.c_str());
 }
 

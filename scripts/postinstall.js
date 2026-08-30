@@ -113,7 +113,14 @@ function download(url, destPath) {
             }
             res.pipe(file);
             file.on('finish', function () {
-              file.close(resolve);
+              file.close(function() {
+                const stat = fs.statSync(destPath);
+                if (stat.size === 0) {
+                  try { fs.unlinkSync(destPath); } catch {}
+                  return reject(new Error('Downloaded file is empty: ' + path.basename(destPath)));
+                }
+                resolve();
+              });
             });
           }
         )
@@ -199,7 +206,7 @@ async function main() {
         console.log('  ✓ XCFramework assembled successfully.');
       } catch (err) {
         console.error('  ✗ Failed to assemble XCFramework: ' + err.message);
-        failed = true;
+        process.exit(1);
       }
     } else {
       console.log('  ✓ XCFramework already exists.');
@@ -225,7 +232,7 @@ async function main() {
         '',
       ].join('\n')
     );
-    process.exit(0);
+    process.exit(1);
   }
 
   console.log('\n[react-native-fast-html-parser] All binaries ready.\n');

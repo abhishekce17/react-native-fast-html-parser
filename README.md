@@ -1,5 +1,11 @@
 # react-native-fast-html-parser
 
+[![npm](https://img.shields.io/npm/v/react-native-fast-html-parser?color=orange&label=npm)](https://www.npmjs.com/package/react-native-fast-html-parser)
+[![license](https://img.shields.io/npm/l/react-native-fast-html-parser?color=green&label=license)](LICENSE)
+[![platforms](https://img.shields.io/badge/platforms-iOS%20%7C%20Android-lightgrey)](https://github.com/abhishekce17/react-native-fast-html-parser)
+[![nitro](https://img.shields.io/badge/powered%20by-Nitro%20Modules-blue)](https://nitro.margelo.com)
+[![rust](https://img.shields.io/badge/core-Rust-orange?logo=rust)](https://www.rust-lang.org)
+
 A high-performance, zero-copy HTML-to-structured-JSON parser library for React Native. Powered by a lightning-fast Rust core engine and integrated via direct C++ JSI using Margelo Nitro Modules.
 
 It achieves pure zero-copy shared-memory access on-device. This avoids standard string/JSON serialization overhead and Hermes garbage collection pauses during render loops.

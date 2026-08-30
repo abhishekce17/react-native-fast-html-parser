@@ -73,6 +73,34 @@ jobs:
       - name: Generate nitrogen code
         run: yarn nitrogen
 
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk
+
+      - name: Cache Rust build
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            rust/target
+          key: ${{ runner.os }}-cargo-android-${{ hashFiles('rust/Cargo.lock') }}
+
+      - name: Build Rust binaries for Android
+        run: |
+          cd rust
+          cargo ndk \
+            -t arm64-v8a \
+            -t armeabi-v7a \
+            -t x86 \
+            -t x86_64 \
+            -o ../android/src/main/jniLibs \
+            build --release
+
       - name: Cache turborepo for Android
         uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
         with:
@@ -100,7 +128,6 @@ jobs:
         if: env.turbo_cache_hit != 1
         run: |
           /bin/bash -c "yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null"
-
 
       - name: Cache Gradle
         if: env.turbo_cache_hit != 1
@@ -138,6 +165,28 @@ jobs:
       - name: Generate nitrogen code
         run: yarn nitrogen
 
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios,aarch64-apple-ios-sim
+
+      - name: Cache Rust build
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            rust/target
+          key: ${{ runner.os }}-cargo-ios-${{ hashFiles('rust/Cargo.lock') }}
+
+      - name: Build Rust binaries for iOS
+        run: |
+          cargo build --manifest-path rust/Cargo.toml --target aarch64-apple-ios --release
+          cargo build --manifest-path rust/Cargo.toml --target aarch64-apple-ios-sim --release
+          mkdir -p ios/libs/device ios/libs/sim
+          cp rust/target/aarch64-apple-ios/release/libhtml_2_json.a ios/libs/device/libhtml_2_json.a
+          cp rust/target/aarch64-apple-ios-sim/release/libhtml_2_json.a ios/libs/sim/libhtml_2_json.a
+
       - name: Cache turborepo for iOS
         uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
         with:
@@ -171,4 +220,3 @@ jobs:
       - name: Build example for iOS
         run: |
           yarn turbo run build:ios --cache-dir="${{ env.TURBO_CACHE_DIR }}"
-

@@ -15,7 +15,8 @@ const path = require('path');
 const pkg = require('../package.json');
 const VERSION = pkg.version;
 const REPO = 'abhishekce17/react-native-fast-html-parser';
-const BASE_URL = 'https://github.com/' + REPO + '/releases/download/v' + VERSION;
+const BASE_URL =
+  'https://github.com/' + REPO + '/releases/download/v' + VERSION;
 const PKG_ROOT = path.resolve(__dirname, '..');
 
 const BINARIES = [
@@ -29,45 +30,100 @@ const BINARIES = [
   },
   {
     name: 'libhtml_2_json-android-arm64-v8a.so',
-    dest: path.join(PKG_ROOT, 'android', 'src', 'main', 'jniLibs', 'arm64-v8a', 'libhtml_2_json.so'),
+    dest: path.join(
+      PKG_ROOT,
+      'android',
+      'src',
+      'main',
+      'jniLibs',
+      'arm64-v8a',
+      'libhtml_2_json.so'
+    ),
   },
   {
     name: 'libhtml_2_json-android-armeabi-v7a.so',
-    dest: path.join(PKG_ROOT, 'android', 'src', 'main', 'jniLibs', 'armeabi-v7a', 'libhtml_2_json.so'),
+    dest: path.join(
+      PKG_ROOT,
+      'android',
+      'src',
+      'main',
+      'jniLibs',
+      'armeabi-v7a',
+      'libhtml_2_json.so'
+    ),
   },
   {
     name: 'libhtml_2_json-android-x86.so',
-    dest: path.join(PKG_ROOT, 'android', 'src', 'main', 'jniLibs', 'x86', 'libhtml_2_json.so'),
+    dest: path.join(
+      PKG_ROOT,
+      'android',
+      'src',
+      'main',
+      'jniLibs',
+      'x86',
+      'libhtml_2_json.so'
+    ),
   },
   {
     name: 'libhtml_2_json-android-x86_64.so',
-    dest: path.join(PKG_ROOT, 'android', 'src', 'main', 'jniLibs', 'x86_64', 'libhtml_2_json.so'),
+    dest: path.join(
+      PKG_ROOT,
+      'android',
+      'src',
+      'main',
+      'jniLibs',
+      'x86_64',
+      'libhtml_2_json.so'
+    ),
   },
 ];
 
 function download(url, destPath) {
-  return new Promise(function(resolve, reject) {
+  return new Promise(function (resolve, reject) {
     fs.mkdirSync(path.dirname(destPath), { recursive: true });
     const file = fs.createWriteStream(destPath);
 
     function get(currentUrl) {
-      https.get(currentUrl, { headers: { 'User-Agent': 'react-native-fast-html-parser-postinstall' } }, function(res) {
-        if (res.statusCode === 301 || res.statusCode === 302) {
+      https
+        .get(
+          currentUrl,
+          {
+            headers: {
+              'User-Agent': 'react-native-fast-html-parser-postinstall',
+            },
+          },
+          function (res) {
+            if (res.statusCode === 301 || res.statusCode === 302) {
+              file.close();
+              return get(res.headers.location);
+            }
+            if (res.statusCode !== 200) {
+              file.close();
+              try {
+                fs.unlinkSync(destPath);
+              } catch {}
+              return reject(
+                new Error(
+                  'Failed to download ' +
+                    currentUrl +
+                    ': HTTP ' +
+                    res.statusCode
+                )
+              );
+            }
+            res.pipe(file);
+            file.on('finish', function () {
+              file.close(resolve);
+            });
+          }
+        )
+        .on('error', function (err) {
           file.close();
-          return get(res.headers.location);
-        }
-        if (res.statusCode !== 200) {
-          file.close();
-          try { fs.unlinkSync(destPath); } catch (_) {}
-          return reject(new Error('Failed to download ' + currentUrl + ': HTTP ' + res.statusCode));
-        }
-        res.pipe(file);
-        file.on('finish', function() { file.close(resolve); });
-      }).on('error', function(err) {
-        file.close();
-        try { fs.unlinkSync(destPath); } catch (_) {}
-        reject(err);
-      });
+          try {
+            fs.unlinkSync(destPath);
+          } catch {}
+          reject(err);
+        });
     }
 
     get(url);
@@ -75,7 +131,11 @@ function download(url, destPath) {
 }
 
 async function main() {
-  console.log('\n[react-native-fast-html-parser] Downloading native binaries v' + VERSION + '...');
+  console.log(
+    '\n[react-native-fast-html-parser] Downloading native binaries v' +
+      VERSION +
+      '...'
+  );
   console.log('[react-native-fast-html-parser] Source: ' + BASE_URL + '\n');
 
   let failed = false;
@@ -100,22 +160,24 @@ async function main() {
   }
 
   if (failed) {
-    console.error([
-      '',
-      '[react-native-fast-html-parser] Some binaries failed to download.',
-      '  This may happen if:',
-      '    - You are offline',
-      '    - Release v' + VERSION + ' has not been published yet on GitHub',
-      '',
-      '  Manually download them from:',
-      '    https://github.com/' + REPO + '/releases/tag/v' + VERSION,
-      '',
-      '  Place them in:',
-      '    ios/libs/device/libhtml_2_json.a',
-      '    ios/libs/sim/libhtml_2_json.a',
-      '    android/src/main/jniLibs/<ABI>/libhtml_2_json.so',
-      '',
-    ].join('\n'));
+    console.error(
+      [
+        '',
+        '[react-native-fast-html-parser] Some binaries failed to download.',
+        '  This may happen if:',
+        '    - You are offline',
+        '    - Release v' + VERSION + ' has not been published yet on GitHub',
+        '',
+        '  Manually download them from:',
+        '    https://github.com/' + REPO + '/releases/tag/v' + VERSION,
+        '',
+        '  Place them in:',
+        '    ios/libs/device/libhtml_2_json.a',
+        '    ios/libs/sim/libhtml_2_json.a',
+        '    android/src/main/jniLibs/<ABI>/libhtml_2_json.so',
+        '',
+      ].join('\n')
+    );
     process.exit(0);
   }
 

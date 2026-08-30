@@ -1,6 +1,9 @@
 import type { HybridObject } from 'react-native-nitro-modules';
 
-export interface InlineNode extends HybridObject<{ ios: 'c++', android: 'c++' }> {
+export interface InlineNode extends HybridObject<{
+  ios: 'c++';
+  android: 'c++';
+}> {
   readonly type: string;
   readonly text: string;
   readonly url: string;
@@ -8,31 +11,40 @@ export interface InlineNode extends HybridObject<{ ios: 'c++', android: 'c++' }>
   getChild(index: number): InlineNode | null;
 }
 
-export interface ListItem extends HybridObject<{ ios: 'c++', android: 'c++' }> {
+export interface ListItem extends HybridObject<{ ios: 'c++'; android: 'c++' }> {
   readonly childCount: number;
   getChild(index: number): InlineNode | null;
   readonly nestedCount: number;
   getNested(index: number): ContentBlock | null;
 }
 
-export interface TableCell extends HybridObject<{ ios: 'c++', android: 'c++' }> {
+export interface TableCell extends HybridObject<{
+  ios: 'c++';
+  android: 'c++';
+}> {
   readonly childCount: number;
   getChild(index: number): InlineNode | null;
 }
 
-export interface TableRow extends HybridObject<{ ios: 'c++', android: 'c++' }> {
+export interface TableRow extends HybridObject<{ ios: 'c++'; android: 'c++' }> {
   readonly cellCount: number;
   getCell(index: number): TableCell | null;
 }
 
-export interface DefinitionItem extends HybridObject<{ ios: 'c++', android: 'c++' }> {
+export interface DefinitionItem extends HybridObject<{
+  ios: 'c++';
+  android: 'c++';
+}> {
   readonly termCount: number;
   getTerm(index: number): InlineNode | null;
   readonly defCount: number;
   getDef(index: number): InlineNode | null;
 }
 
-export interface ContentBlock extends HybridObject<{ ios: 'c++', android: 'c++' }> {
+export interface ContentBlock extends HybridObject<{
+  ios: 'c++';
+  android: 'c++';
+}> {
   readonly type: string;
   readonly level: number;
   readonly url: string;
@@ -58,11 +70,17 @@ export interface ContentBlock extends HybridObject<{ ios: 'c++', android: 'c++' 
   getDefItem(index: number): DefinitionItem | null;
 }
 
-export interface ParsedArticle extends HybridObject<{ ios: 'c++', android: 'c++' }> {
+export interface ParsedArticle extends HybridObject<{
+  ios: 'c++';
+  android: 'c++';
+}> {
   readonly length: number;
   getBlock(index: number): ContentBlock | null;
 }
 
-export interface FastHtmlParser extends HybridObject<{ ios: 'c++', android: 'c++' }> {
+export interface FastHtmlParser extends HybridObject<{
+  ios: 'c++';
+  android: 'c++';
+}> {
   parse(html: string): ParsedArticle | null;
 }

@@ -25,6 +25,7 @@
     "!ios/libs",
     "!ios/build",
     "!android/build",
+    "!android/src/main/jniLibs",
     "!android/gradle",
     "!android/gradlew",
     "!android/gradlew.bat",

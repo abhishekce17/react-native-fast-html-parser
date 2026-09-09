@@ -346,6 +346,7 @@ export function HtmlRenderer({
                   onPress={() => handleLinkPress(block.linkUrl)}
                   accessibilityRole="link"
                   accessibilityHint={block.linkUrl}
+                  style={styles.imageTouchable}
                 >
                   {imageEl}
                 </TouchableOpacity>
@@ -542,6 +543,11 @@ const styles = StyleSheet.create({
   },
   figureContainer: {
     marginVertical: 10,
+    alignItems: 'center',
+    width: '100%',
+  },
+  imageTouchable: {
+    width: '100%',
     alignItems: 'center',
   },
   image: {

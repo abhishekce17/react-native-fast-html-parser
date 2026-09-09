@@ -175,10 +175,16 @@ std::variant<std::shared_ptr<HybridContentBlockSpec>, NullType> HybridParsedArti
     auto self = std::dynamic_pointer_cast<HybridParsedArticle>(shared_from_this());
     return std::make_shared<HybridContentBlock>(self, block, t);
 }
+std::string HybridParsedArticle::toJSON() {
+    return getStringAndFree(serialize_article_to_json_ffi(m_article));
+}
 
 // ── HybridFastHtmlParser ─────────────────────────────────────────────────────
 std::variant<std::shared_ptr<HybridParsedArticleSpec>, NullType> HybridFastHtmlParser::parse(const std::string& html) {
     return std::make_shared<HybridParsedArticle>(html.c_str());
+}
+std::string HybridFastHtmlParser::parseToJSON(const std::string& html) {
+    return getStringAndFree(parse_html_to_json_ffi(html.c_str()));
 }
 
 } // namespace margelo::nitro::fasthtmlparser

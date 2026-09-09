@@ -666,6 +666,9 @@ fn parse_inline_node(node: NodeRef<Node>, acc: &mut Vec<InlineNode>) {
 
             "br" => acc.push(InlineNode::Break {}),
 
+            // Ignore non-content nodes
+            "script" | "style" | "svg" | "noscript" | "template" | "head" | "meta" => {}
+
             // Any other inline wrapper (span, abbr, mark, …) — recurse into children
             _ => {
                 for child in node.children() {
@@ -818,3 +821,817 @@ fn parse_div_table_cells<'a>(node: NodeRef<'a, Node>, cells: &mut Vec<TableCell>
         }
     }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Unit Tests
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::models::{ContentBlock, DefinitionItem, InlineNode, ListItem, TableCell, TableRow};
+
+    // ── Group 1: Basic & Empty Inputs ──────────────────────────────────────────
+
+    #[test]
+    fn test_parse_empty_and_whitespace() {
+        assert!(parse_html("").is_empty());
+        assert!(parse_html("   \n\t  ").is_empty());
+        let empty_p = parse_html("<p></p>");
+        assert_eq!(empty_p.len(), 1);
+        if let ContentBlock::Paragraph { children } = &empty_p[0] {
+            assert!(children.is_empty());
+        }
+        assert!(parse_html("<div>   </div>").is_empty());
+    }
+
+    #[test]
+    fn test_parse_paragraphs_and_inlines() {
+        let html = "<p>Hello <b>bold</b> <i>italic</i> <a href=\"https://example.com\">link</a> <code>code</code></p>";
+        let blocks = parse_html(html);
+        assert_eq!(blocks.len(), 1);
+
+        if let ContentBlock::Paragraph { children } = &blocks[0] {
+            assert!(!children.is_empty());
+            let has_bold = children.iter().any(|c| matches!(c, InlineNode::Bold { .. }));
+            let has_italic = children.iter().any(|c| matches!(c, InlineNode::Italic { .. }));
+            let has_link = children.iter().any(|c| matches!(c, InlineNode::Link { .. }));
+            let has_code = children.iter().any(|c| matches!(c, InlineNode::InlineCode { .. }));
+            assert!(has_bold && has_italic && has_link && has_code);
+        } else {
+            panic!("Expected Paragraph block");
+        }
+    }
+
+    #[test]
+    fn test_parse_headings() {
+        let html = "<h1>Heading 1</h1><h2>Heading 2</h2><h3>Heading 3</h3><h4>H4</h4><h5>H5</h5><h6>H6</h6>";
+        let blocks = parse_html(html);
+        assert_eq!(blocks.len(), 6);
+
+        for (i, block) in blocks.iter().enumerate() {
+            if let ContentBlock::Heading { level, children } = block {
+                assert_eq!(*level, (i + 1) as u8);
+                assert!(!children.is_empty());
+            } else {
+                panic!("Expected Heading block at index {i}");
+            }
+        }
+    }
+
+    #[test]
+    fn test_headings_with_inline_formatting() {
+        let html = "<h1>Title with <b>Bold</b> and <i>Italic</i> and <a href=\"https://test.com\">Link</a></h1>";
+        let blocks = parse_html(html);
+        assert_eq!(blocks.len(), 1);
+        if let ContentBlock::Heading { level, children } = &blocks[0] {
+            assert_eq!(*level, 1);
+            assert!(children.len() >= 3);
+            let has_bold = children.iter().any(|c| matches!(c, InlineNode::Bold { .. }));
+            let has_italic = children.iter().any(|c| matches!(c, InlineNode::Italic { .. }));
+            let has_link = children.iter().any(|c| matches!(c, InlineNode::Link { .. }));
+            assert!(has_bold && has_italic && has_link);
+        } else {
+            panic!("Expected Heading");
+        }
+    }
+
+    // ── Group 2: Complex Lists & Nesting ──────────────────────────────────────
+
+    #[test]
+    fn test_parse_nested_lists() {
+        let html = r#"
+            <ul>
+                <li>Item 1</li>
+                <li>Item 2
+                    <ol>
+                        <li>Sub 2.1</li>
+                        <li>Sub 2.2</li>
+                    </ol>
+                </li>
+                <li>Item 3</li>
+            </ul>
+        "#;
+        let blocks = parse_html(html);
+        assert_eq!(blocks.len(), 1);
+
+        if let ContentBlock::List { ordered, items } = &blocks[0] {
+            assert!(!ordered);
+            assert_eq!(items.len(), 3);
+            let ListItem::Item { nested, .. } = &items[1];
+            assert_eq!(nested.len(), 1);
+            if let ContentBlock::List { ordered: sub_ordered, items: sub_items } = &nested[0] {
+                assert!(sub_ordered);
+                assert_eq!(sub_items.len(), 2);
+            } else {
+                panic!("Expected nested ordered list");
+            }
+        } else {
+            panic!("Expected List block");
+        }
+    }
+
+    #[test]
+    fn test_deeply_nested_lists_4_levels() {
+        let html = r#"
+            <ul>
+                <li>Level 1
+                    <ol>
+                        <li>Level 2
+                            <ul>
+                                <li>Level 3
+                                    <ol>
+                                        <li>Level 4 deepest</li>
+                                    </ol>
+                                </li>
+                            </ul>
+                        </li>
+                    </ol>
+                </li>
+            </ul>
+        "#;
+        let blocks = parse_html(html);
+        assert_eq!(blocks.len(), 1);
+        if let ContentBlock::List { items, .. } = &blocks[0] {
+            assert_eq!(items.len(), 1);
+            let ListItem::Item { nested: l2, .. } = &items[0];
+            assert_eq!(l2.len(), 1);
+            if let ContentBlock::List { items: l2_items, .. } = &l2[0] {
+                let ListItem::Item { nested: l3, .. } = &l2_items[0];
+                assert_eq!(l3.len(), 1);
+                if let ContentBlock::List { items: l3_items, .. } = &l3[0] {
+                    let ListItem::Item { nested: l4, .. } = &l3_items[0];
+                    assert_eq!(l4.len(), 1);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_list_items_with_inline_formatting_and_links() {
+        let html = r#"
+            <ul>
+                <li>Item with <b>bold text</b></li>
+                <li>Item with <a href="https://example.com">external link</a></li>
+                <li>Item with <code>console.log()</code> code</li>
+            </ul>
+        "#;
+        let blocks = parse_html(html);
+        assert_eq!(blocks.len(), 1);
+        if let ContentBlock::List { items, .. } = &blocks[0] {
+            assert_eq!(items.len(), 3);
+            let ListItem::Item { children: c0, .. } = &items[0];
+            assert!(c0.iter().any(|c| matches!(c, InlineNode::Bold { .. })));
+            let ListItem::Item { children: c1, .. } = &items[1];
+            assert!(c1.iter().any(|c| matches!(c, InlineNode::Link { .. })));
+            let ListItem::Item { children: c2, .. } = &items[2];
+            assert!(c2.iter().any(|c| matches!(c, InlineNode::InlineCode { .. })));
+        }
+    }
+
+    // ── Group 3: Code Blocks & Language Detection ──────────────────────────────
+
+    #[test]
+    fn test_parse_codeblock_language_detection() {
+        let html = r#"
+            <pre><code class="language-typescript">const x = 1;</code></pre>
+            <pre class="lang-python"><code>def foo(): pass</code></pre>
+            <div class="highlight rust"><pre><code>fn main() {}</code></pre></div>
+        "#;
+        let blocks = parse_html(html);
+        assert_eq!(blocks.len(), 3);
+
+        if let ContentBlock::CodeBlock { language, code } = &blocks[0] {
+            assert_eq!(language.as_deref(), Some("typescript"));
+            assert_eq!(code, "const x = 1;");
+        } else {
+            panic!("Expected CodeBlock");
+        }
+
+        if let ContentBlock::CodeBlock { language, code } = &blocks[1] {
+            assert_eq!(language.as_deref(), Some("python"));
+            assert_eq!(code, "def foo(): pass");
+        } else {
+            panic!("Expected CodeBlock");
+        }
+
+        if let ContentBlock::CodeBlock { language, code } = &blocks[2] {
+            assert_eq!(language.as_deref(), Some("rust"));
+            assert_eq!(code, "fn main() {}");
+        } else {
+            panic!("Expected CodeBlock");
+        }
+    }
+
+    #[test]
+    fn test_codeblock_with_html_tags_inside() {
+        let html = r#"<pre><code class="language-html">&lt;div class="box"&gt;&lt;span&gt;Text&lt;/span&gt;&lt;/div&gt;</code></pre>"#;
+        let blocks = parse_html(html);
+        assert_eq!(blocks.len(), 1);
+        if let ContentBlock::CodeBlock { language, code } = &blocks[0] {
+            assert_eq!(language.as_deref(), Some("html"));
+            assert!(code.contains("<div class=\"box\">"));
+        } else {
+            panic!("Expected CodeBlock");
+        }
+    }
+
+    #[test]
+    fn test_codeblock_bare_pre_without_code_tag() {
+        let html = r#"<pre class="language-go">package main&#10;func main() {}</pre>"#;
+        let blocks = parse_html(html);
+        assert_eq!(blocks.len(), 1);
+        if let ContentBlock::CodeBlock { language, code } = &blocks[0] {
+            assert_eq!(language.as_deref(), Some("go"));
+            assert!(code.contains("package main"));
+        } else {
+            panic!("Expected CodeBlock");
+        }
+    }
+
+    #[test]
+    fn test_codeblock_with_inner_spans_syntax_tokens() {
+        let html = r#"<pre><code class="language-javascript"><span class="kwd">const</span> <span class="var">name</span> = <span class="str">"Antigravity"</span>;</code></pre>"#;
+        let blocks = parse_html(html);
+        assert_eq!(blocks.len(), 1);
+        if let ContentBlock::CodeBlock { language, code } = &blocks[0] {
+            assert_eq!(language.as_deref(), Some("javascript"));
+            assert_eq!(code, "const name = \"Antigravity\";");
+        } else {
+            panic!("Expected CodeBlock");
+        }
+    }
+
+    #[test]
+    fn test_codeblock_with_quoted_escaped_attributes() {
+        let html = r#"<pre class=\"language-cpp\"><code>#include &lt;iostream&gt;</code></pre>"#;
+        let blocks = parse_html(html);
+        assert_eq!(blocks.len(), 1);
+        if let ContentBlock::CodeBlock { language, code } = &blocks[0] {
+            assert_eq!(language.as_deref(), Some("cpp"));
+            assert!(code.contains("#include <iostream>"));
+        }
+    }
+
+    // ── Group 4: Tables & Ragged Rows ──────────────────────────────────────────
+
+    #[test]
+    fn test_parse_tables() {
+        let html = r#"
+            <table>
+                <thead>
+                    <tr><th>Name</th><th>Role</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>Alice</td><td>Engineer</td></tr>
+                    <tr><td>Bob</td><td>Designer</td></tr>
+                </tbody>
+            </table>
+        "#;
+        let blocks = parse_html(html);
+        assert_eq!(blocks.len(), 1);
+
+        if let ContentBlock::Table { rows } = &blocks[0] {
+            assert_eq!(rows.len(), 3);
+            let TableRow::Row { cells } = &rows[0];
+            assert_eq!(cells.len(), 2);
+        } else {
+            panic!("Expected Table block");
+        }
+    }
+
+    #[test]
+    fn test_table_with_all_inline_types_in_cells() {
+        let html = r#"
+            <table>
+                <tr>
+                    <td><b>Bold</b> text</td>
+                    <td><i>Italic</i> text</td>
+                    <td><a href="https://example.com">Link</a></td>
+                    <td><code>inline_code()</code></td>
+                </tr>
+            </table>
+        "#;
+        let blocks = parse_html(html);
+        assert_eq!(blocks.len(), 1);
+        if let ContentBlock::Table { rows } = &blocks[0] {
+            assert_eq!(rows.len(), 1);
+            let TableRow::Row { cells } = &rows[0];
+            assert_eq!(cells.len(), 4);
+            let TableCell::Cell { children: c0 } = &cells[0];
+            assert!(c0.iter().any(|c| matches!(c, InlineNode::Bold { .. })));
+            let TableCell::Cell { children: c1 } = &cells[1];
+            assert!(c1.iter().any(|c| matches!(c, InlineNode::Italic { .. })));
+            let TableCell::Cell { children: c2 } = &cells[2];
+            assert!(c2.iter().any(|c| matches!(c, InlineNode::Link { .. })));
+            let TableCell::Cell { children: c3 } = &cells[3];
+            assert!(c3.iter().any(|c| matches!(c, InlineNode::InlineCode { .. })));
+        }
+    }
+
+    #[test]
+    fn test_table_ragged_rows_and_empty_cells() {
+        let html = r#"
+            <table>
+                <tr><td>Cell 1</td><td>Cell 2</td><td>Cell 3</td></tr>
+                <tr><td>Only 1 Cell</td></tr>
+                <tr><td></td><td>   </td></tr>
+            </table>
+        "#;
+        let blocks = parse_html(html);
+        assert_eq!(blocks.len(), 1);
+        if let ContentBlock::Table { rows } = &blocks[0] {
+            assert_eq!(rows.len(), 3);
+            let TableRow::Row { cells: r0 } = &rows[0];
+            assert_eq!(r0.len(), 3);
+            let TableRow::Row { cells: r1 } = &rows[1];
+            assert_eq!(r1.len(), 1);
+            let TableRow::Row { cells: r2 } = &rows[2];
+            assert_eq!(r2.len(), 2);
+        }
+    }
+
+    #[test]
+    fn test_table_with_tfoot_and_caption() {
+        let html = r#"
+            <table>
+                <caption>Quarterly Summary</caption>
+                <thead><tr><th>Q</th><th>Revenue</th></tr></thead>
+                <tbody><tr><td>Q1</td><td>$100K</td></tr></tbody>
+                <tfoot><tr><td>Total</td><td>$100K</td></tr></tfoot>
+            </table>
+        "#;
+        let blocks = parse_html(html);
+        assert_eq!(blocks.len(), 1);
+        if let ContentBlock::Table { rows } = &blocks[0] {
+            assert_eq!(rows.len(), 3); // thead, tbody, tfoot
+        }
+    }
+
+    // ── Group 5: Blockquotes & Nested Structures ──────────────────────────────
+
+    #[test]
+    fn test_parse_blockquotes() {
+        let html = "<blockquote><p>Quote line 1</p><p>Quote line 2</p></blockquote>";
+        let blocks = parse_html(html);
+        assert_eq!(blocks.len(), 1);
+
+        if let ContentBlock::Quote { children } = &blocks[0] {
+            assert_eq!(children.len(), 2);
+        } else {
+            panic!("Expected Quote block");
+        }
+    }
+
+    #[test]
+    fn test_nested_blockquotes_multi_level() {
+        let html = r#"
+            <blockquote>
+                <p>Level 1 quote</p>
+                <blockquote>
+                    <p>Level 2 quote</p>
+                    <blockquote>
+                        <p>Level 3 deepest quote</p>
+                    </blockquote>
+                </blockquote>
+            </blockquote>
+        "#;
+        let blocks = parse_html(html);
+        assert_eq!(blocks.len(), 1);
+        if let ContentBlock::Quote { children: l1 } = &blocks[0] {
+            assert_eq!(l1.len(), 2);
+            if let ContentBlock::Quote { children: l2 } = &l1[1] {
+                assert_eq!(l2.len(), 2);
+                assert!(matches!(&l2[1], ContentBlock::Quote { .. }));
+            } else {
+                panic!("Expected nested quote");
+            }
+        }
+    }
+
+    #[test]
+    fn test_blockquote_containing_headings_and_lists() {
+        let html = r#"
+            <blockquote>
+                <h2>Quoted Section</h2>
+                <p>Paragraph inside quote</p>
+                <ul><li>List in quote</li></ul>
+            </blockquote>
+        "#;
+        let blocks = parse_html(html);
+        assert_eq!(blocks.len(), 1);
+        if let ContentBlock::Quote { children } = &blocks[0] {
+            assert_eq!(children.len(), 3);
+            assert!(matches!(&children[0], ContentBlock::Heading { .. }));
+            assert!(matches!(&children[1], ContentBlock::Paragraph { .. }));
+            assert!(matches!(&children[2], ContentBlock::List { .. }));
+        }
+    }
+
+    // ── Group 6: Media, Figures & Embeds ──────────────────────────────────────
+
+    #[test]
+    fn test_parse_media_and_embeds() {
+        let html = r#"
+            <img src="https://example.com/pic.jpg" alt="A photo" />
+            <figure>
+                <img src="https://example.com/fig.png" alt="Figure photo" />
+                <figcaption>Figure caption text</figcaption>
+            </figure>
+            <video src="https://example.com/video.mp4" poster="https://example.com/poster.jpg"></video>
+            <audio src="https://example.com/audio.mp3"></audio>
+            <iframe src="https://youtube.com/embed/xyz" title="YouTube video"></iframe>
+            <hr />
+        "#;
+        let blocks = parse_html(html);
+        assert_eq!(blocks.len(), 6);
+
+        match &blocks[0] {
+            ContentBlock::Image { url, alt } => {
+                assert_eq!(url, "https://example.com/pic.jpg");
+                assert_eq!(alt.as_deref(), Some("A photo"));
+            }
+            _ => panic!("Expected Image"),
+        }
+
+        match &blocks[1] {
+            ContentBlock::Figure { url, alt, caption } => {
+                assert_eq!(url, "https://example.com/fig.png");
+                assert_eq!(alt.as_deref(), Some("Figure photo"));
+                assert_eq!(caption.as_deref(), Some("Figure caption text"));
+            }
+            _ => panic!("Expected Figure"),
+        }
+
+        match &blocks[2] {
+            ContentBlock::Video { src, poster } => {
+                assert_eq!(src, "https://example.com/video.mp4");
+                assert_eq!(poster.as_deref(), Some("https://example.com/poster.jpg"));
+            }
+            _ => panic!("Expected Video"),
+        }
+
+        match &blocks[3] {
+            ContentBlock::Audio { src } => {
+                assert_eq!(src, "https://example.com/audio.mp3");
+            }
+            _ => panic!("Expected Audio"),
+        }
+
+        match &blocks[4] {
+            ContentBlock::Embed { src, title } => {
+                assert_eq!(src, "https://youtube.com/embed/xyz");
+                assert_eq!(title.as_deref(), Some("YouTube video"));
+            }
+            _ => panic!("Expected Embed"),
+        }
+
+        match &blocks[5] {
+            ContentBlock::Separator {} => {}
+            _ => panic!("Expected Separator"),
+        }
+    }
+
+    #[test]
+    fn test_video_with_source_tag() {
+        let html = r#"<video poster="cover.jpg"><source src="https://stream.io/video.m3u8" type="application/x-mpegURL"></video>"#;
+        let blocks = parse_html(html);
+        assert_eq!(blocks.len(), 1);
+        if let ContentBlock::Video { src, poster } = &blocks[0] {
+            assert_eq!(src, "https://stream.io/video.m3u8");
+            assert_eq!(poster.as_deref(), Some("cover.jpg"));
+        } else {
+            panic!("Expected Video");
+        }
+    }
+
+    #[test]
+    fn test_audio_with_source_tag() {
+        let html = r#"<audio><source src="https://stream.io/audio.mp3" type="audio/mpeg"></audio>"#;
+        let blocks = parse_html(html);
+        assert_eq!(blocks.len(), 1);
+        if let ContentBlock::Audio { src } = &blocks[0] {
+            assert_eq!(src, "https://stream.io/audio.mp3");
+        } else {
+            panic!("Expected Audio");
+        }
+    }
+
+    #[test]
+    fn test_figure_with_formatted_caption() {
+        let html = r#"
+            <figure>
+                <img src="chart.png" alt="Sales Growth" />
+                <figcaption>Chart showing <b>2026</b> performance metrics with <i>positive</i> ROI.</figcaption>
+            </figure>
+        "#;
+        let blocks = parse_html(html);
+        assert_eq!(blocks.len(), 1);
+        if let ContentBlock::Figure { url, caption, .. } = &blocks[0] {
+            assert_eq!(url, "chart.png");
+            assert!(caption.as_ref().unwrap().contains("2026"));
+        }
+    }
+
+    // ── Group 7: Definition Lists ─────────────────────────────────────────────
+
+    #[test]
+    fn test_parse_definition_list() {
+        let html = "<dl><dt>Term 1</dt><dd>Def 1</dd><dt>Term 2</dt><dd>Def 2</dd></dl>";
+        let blocks = parse_html(html);
+        assert_eq!(blocks.len(), 1);
+
+        if let ContentBlock::DefinitionList { items } = &blocks[0] {
+            assert_eq!(items.len(), 2);
+        } else {
+            panic!("Expected DefinitionList");
+        }
+    }
+
+    #[test]
+    fn test_definition_list_multiple_terms_and_defs() {
+        let html = r#"
+            <dl>
+                <dt>Rust</dt>
+                <dt>Rust-lang</dt>
+                <dd>A language empowering everyone to build reliable and efficient software.</dd>
+                <dt>JSI</dt>
+                <dd>JavaScript Interface for C++ HostObjects.</dd>
+                <dd>Direct memory bridging without JSON serialization overhead.</dd>
+            </dl>
+        "#;
+        let blocks = parse_html(html);
+        assert_eq!(blocks.len(), 1);
+        if let ContentBlock::DefinitionList { items } = &blocks[0] {
+            assert!(items.len() >= 2);
+            let first_item: &DefinitionItem = &items[0];
+            assert!(!first_item.definition.is_empty());
+        }
+    }
+
+    // ── Group 8: Malformed HTML, Overlapping Tags & Tag Recovery ────────────────
+
+    #[test]
+    fn test_malformed_html_recovery() {
+        let html = "<p>First <b>bold <i>italic without closing <p>Second paragraph <div>Inside div <li>item without ul";
+        let blocks = parse_html(html);
+        assert!(blocks.len() >= 2);
+    }
+
+    #[test]
+    fn test_overlapping_inline_tags_acid_test() {
+        let html = "<p>Text with <b>bold <i>bold-and-italic</b> italic-only</i> regular text</p>";
+        let blocks = parse_html(html);
+        assert_eq!(blocks.len(), 1);
+        if let ContentBlock::Paragraph { children } = &blocks[0] {
+            assert!(!children.is_empty());
+        }
+    }
+
+    #[test]
+    fn test_deeply_nested_unclosed_tags() {
+        let html = "<section><div><article><div><p><span><b><i>Deeply unclosed text with no ending tags";
+        let blocks = parse_html(html);
+        assert!(!blocks.is_empty());
+    }
+
+    #[test]
+    fn test_stray_table_elements_outside_table() {
+        let html = "<tr><td>Floating Cell 1</td><td>Floating Cell 2</td></tr>";
+        let blocks = parse_html(html);
+        assert!(!blocks.is_empty());
+    }
+
+    #[test]
+    fn test_stray_list_items_outside_list() {
+        let html = "<li>Stray item A</li><li>Stray item B</li>";
+        let blocks = parse_html(html);
+        assert!(!blocks.is_empty());
+    }
+
+    #[test]
+    fn test_script_style_svg_stripping() {
+        let html = "<p>Visible text <script>alert('xss');</script><style>body { color: red; }</style><svg><path d=\"M0 0\"/></svg> and trailing visible text</p>";
+        let blocks = parse_html(html);
+        assert_eq!(blocks.len(), 1);
+        if let ContentBlock::Paragraph { children } = &blocks[0] {
+            let combined_text: String = children.iter().map(|c| match c {
+                InlineNode::Text { text } => text.clone(),
+                _ => String::new(),
+            }).collect();
+            assert!(combined_text.contains("Visible text"));
+            assert!(combined_text.contains("trailing visible text"));
+            assert!(!combined_text.contains("alert('xss')"));
+            assert!(!combined_text.contains("color: red"));
+        }
+    }
+
+    #[test]
+    fn test_html_comments_and_cdata_stripping() {
+        let html = "<!-- Comment 1 --><div><!-- Inner comment --><p>Clean <!-- inline comment -->content</p></div>";
+        let blocks = parse_html(html);
+        assert_eq!(blocks.len(), 1);
+        if let ContentBlock::Paragraph { children } = &blocks[0] {
+            let text = match &children[0] {
+                InlineNode::Text { text } => text,
+                _ => "",
+            };
+            assert!(text.contains("Clean content") || text.contains("Clean"));
+        }
+    }
+
+    // ── Group 9: HTML Entities, Unicode, RTL & CJK ─────────────────────────────
+
+    #[test]
+    fn test_html_entities_complex_decoding() {
+        let html = "<p>&amp; &lt; &gt; &quot; &#39; &nbsp; &copy; &euro; &mdash; &ndash; &#x1F680;</p>";
+        let blocks = parse_html(html);
+        assert_eq!(blocks.len(), 1);
+        if let ContentBlock::Paragraph { children } = &blocks[0] {
+            assert!(!children.is_empty());
+            let text = match &children[0] {
+                InlineNode::Text { text } => text,
+                _ => "",
+            };
+            assert!(text.contains('&'));
+            assert!(text.contains('<'));
+            assert!(text.contains('>'));
+        }
+    }
+
+    #[test]
+    fn test_unicode_emojis_rtl_and_cjk_scripts() {
+        let html = r#"
+            <h1>Unicode Editorial 🚀 🎉</h1>
+            <p dir="rtl" lang="he">שלום עולם - זהו מבחן עברית</p>
+            <p dir="rtl" lang="ar">مرحبا بالعالم - اختبار اللغة العربية</p>
+            <p lang="ja">こんにちは世界！React Native パルサー</p>
+            <p lang="zh">你好世界，高效的 HTML 解析引擎</p>
+            <p lang="ko">안녕하세요 세계, 고성능 파서</p>
+            <p lang="ru">Привет, мир! Быстрый парсер HTML</p>
+        "#;
+        let blocks = parse_html(html);
+        assert_eq!(blocks.len(), 7);
+        assert!(matches!(&blocks[0], ContentBlock::Heading { .. }));
+        for b in &blocks[1..] {
+            assert!(matches!(b, ContentBlock::Paragraph { .. }));
+        }
+    }
+
+    #[test]
+    fn test_matrix_data_and_aria_attributes() {
+        let html = r#"<p id="p-1" class="intro" data-track="123" aria-label="Intro text" dir="rtl" lang="ar">مرحبا</p>"#;
+        let blocks = parse_html(html);
+        assert_eq!(blocks.len(), 1);
+        if let ContentBlock::Paragraph { children } = &blocks[0] {
+            assert_eq!(children.len(), 1);
+        } else {
+            panic!("Expected Paragraph block");
+        }
+    }
+
+    #[test]
+    fn test_matrix_nested_inline_formatting() {
+        let html = "<p>Text with <b>bold <i>italic <u>underline <s>strike <a href=\"https://test.com\">link</a></s></u></i></b> and <code>code</code><br/>next line</p>";
+        let blocks = parse_html(html);
+        assert_eq!(blocks.len(), 1);
+        if let ContentBlock::Paragraph { children } = &blocks[0] {
+            assert!(children.len() >= 3);
+        } else {
+            panic!("Expected Paragraph block");
+        }
+    }
+
+    #[test]
+    fn test_excessive_whitespace_tabs_newlines_collapse() {
+        let html = "   <p>   Multiple \n\n\t  spaces    inside   <b>   bold   text  </b>  </p>   ";
+        let blocks = parse_html(html);
+        assert_eq!(blocks.len(), 1);
+        if let ContentBlock::Paragraph { children } = &blocks[0] {
+            let first = &children[0];
+            if let InlineNode::Text { text } = first {
+                assert!(!text.starts_with("   "));
+            }
+        }
+    }
+
+    // ── Group 10: Modern Semantic Containers & Div Grids ────────────────────────
+
+    #[test]
+    fn test_matrix_div_grid_table() {
+        let html = r#"
+            <div class="table-container grid">
+                <div class="table-row">
+                    <div class="table-cell">Header 1</div>
+                    <div class="table-cell">Header 2</div>
+                </div>
+                <div class="table-row">
+                    <div class="table-cell">Data 1</div>
+                    <div class="table-cell">Data 2</div>
+                </div>
+            </div>
+        "#;
+        let blocks = parse_html(html);
+        assert_eq!(blocks.len(), 1);
+        if let ContentBlock::Table { rows } = &blocks[0] {
+            assert_eq!(rows.len(), 2);
+        } else {
+            panic!("Expected Table block for div-grid");
+        }
+    }
+
+    #[test]
+    fn test_semantic_html5_containers() {
+        let html = r#"
+            <article>
+                <header>
+                    <h1>Article Title</h1>
+                </header>
+                <section>
+                    <p>Section 1 text</p>
+                </section>
+                <aside>
+                    <p>Sidebar notice</p>
+                </aside>
+                <footer>
+                    <p>Copyright 2026</p>
+                </footer>
+            </article>
+        "#;
+        let blocks = parse_html(html);
+        assert_eq!(blocks.len(), 4);
+        assert!(matches!(&blocks[0], ContentBlock::Heading { .. }));
+        assert!(matches!(&blocks[1], ContentBlock::Paragraph { .. }));
+        assert!(matches!(&blocks[2], ContentBlock::Paragraph { .. }));
+        assert!(matches!(&blocks[3], ContentBlock::Paragraph { .. }));
+    }
+
+    #[test]
+    fn test_mixed_inline_and_blocks_in_div() {
+        let html = "<div>Direct text before <h2>Header</h2> Direct text between <p>Paragraph</p> Direct text after</div>";
+        let blocks = parse_html(html);
+        assert!(blocks.len() >= 4);
+    }
+
+    #[test]
+    fn test_consecutive_horizontal_rules() {
+        let html = "<hr /><hr /><p>Middle text</p><hr />";
+        let blocks = parse_html(html);
+        assert_eq!(blocks.len(), 4);
+        assert!(matches!(&blocks[0], ContentBlock::Separator {}));
+        assert!(matches!(&blocks[1], ContentBlock::Separator {}));
+        assert!(matches!(&blocks[2], ContentBlock::Paragraph { .. }));
+        assert!(matches!(&blocks[3], ContentBlock::Separator {}));
+    }
+
+    #[test]
+    fn test_link_with_nested_bold_and_italic() {
+        let html = r#"<p><a href="https://nitro.margelo.com"><b>Bold</b> and <i>Italic</i> within anchor</a></p>"#;
+        let blocks = parse_html(html);
+        assert_eq!(blocks.len(), 1);
+        if let ContentBlock::Paragraph { children } = &blocks[0] {
+            assert_eq!(children.len(), 1);
+            if let InlineNode::Link { url, children: link_inlines } = &children[0] {
+                assert_eq!(url, "https://nitro.margelo.com");
+                assert!(link_inlines.iter().any(|c| matches!(c, InlineNode::Bold { .. })));
+                assert!(link_inlines.iter().any(|c| matches!(c, InlineNode::Italic { .. })));
+            } else {
+                panic!("Expected Link node");
+            }
+        }
+    }
+
+    #[test]
+    fn test_json_roundtrip_fidelity_complex_document() {
+        let html = r#"
+            <h1>Full Editorial Suite</h1>
+            <p>Intro with <b>bold</b>, <i>italic</i>, and <a href="https://example.com">link</a>.</p>
+            <ul>
+                <li>Bullet 1</li>
+                <li>Bullet 2 with <ol><li>Sub 2.1</li></ol></li>
+            </ul>
+            <blockquote><p>Quote content</p></blockquote>
+            <pre><code class="language-rust">fn main() { println!("Hello"); }</code></pre>
+            <img src="https://example.com/image.png" alt="Test" />
+            <table>
+                <tr><th>Col 1</th><th>Col 2</th></tr>
+                <tr><td>Val 1</td><td>Val 2</td></tr>
+            </table>
+            <hr />
+        "#;
+        let blocks = parse_html(html);
+        assert_eq!(blocks.len(), 8);
+
+        // Serialize to JSON
+        let json_str = serde_json::to_string(&blocks).expect("Serialization failed");
+        assert!(!json_str.is_empty());
+
+        // Deserialize from JSON and verify block count
+        let parsed_json: serde_json::Value = serde_json::from_str(&json_str).expect("Deserialization failed");
+        assert!(parsed_json.is_array());
+        assert_eq!(parsed_json.as_array().unwrap().len(), 8);
+    }
+}
+
+
+

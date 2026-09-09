@@ -7,3 +7,7 @@ const FastHtmlParserHybridObject =
 export function parseHTML(html: string): ParsedArticle | null {
   return FastHtmlParserHybridObject.parse(html);
 }
+
+export function parseHTMLToJSON(html: string): string {
+  return FastHtmlParserHybridObject.parseToJSON(html);
+}

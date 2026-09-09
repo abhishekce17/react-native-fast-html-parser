@@ -5,3 +5,9 @@ export function parseHTML(_html: string): ParsedArticle | null {
     "'react-native-fast-html-parser' is only supported on native platforms."
   );
 }
+
+export function parseHTMLToJSON(_html: string): string {
+  throw new Error(
+    "'react-native-fast-html-parser' is only supported on native platforms."
+  );
+}

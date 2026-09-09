@@ -26,6 +26,35 @@ pub extern "C" fn free_article_ffi(article: *mut ParsedArticle) {
     }
 }
 
+#[unsafe(no_mangle)]
+pub extern "C" fn parse_html_to_json_ffi(html_ptr: *const c_char) -> *mut c_char {
+    if html_ptr.is_null() { return std::ptr::null_mut(); }
+    let c_str = unsafe { CStr::from_ptr(html_ptr) };
+    let html = c_str.to_string_lossy();
+    let blocks = parse_html(&html);
+    match serde_json::to_string(&blocks) {
+        Ok(json_str) => match CString::new(json_str) {
+            Ok(c) => c.into_raw(),
+            Err(_) => std::ptr::null_mut(),
+        },
+        Err(_) => std::ptr::null_mut(),
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn serialize_article_to_json_ffi(article: *const ParsedArticle) -> *mut c_char {
+    if article.is_null() { return std::ptr::null_mut(); }
+    let blocks = unsafe { &(*article).blocks };
+    match serde_json::to_string(blocks) {
+        Ok(json_str) => match CString::new(json_str) {
+            Ok(c) => c.into_raw(),
+            Err(_) => std::ptr::null_mut(),
+        },
+        Err(_) => std::ptr::null_mut(),
+    }
+}
+
+
 // ── Block Getters ──────────────────────────────────────────────────────────
 
 #[unsafe(no_mangle)]
@@ -620,3 +649,35 @@ pub extern "C" fn free_string_ffi(s: *mut c_char) {
         unsafe { let _ = CString::from_raw(s); }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_html_to_json_ffi() {
+        let html = CString::new("<h1>Hello</h1><p>World</p>").unwrap();
+        let json_ptr = parse_html_to_json_ffi(html.as_ptr());
+        assert!(!json_ptr.is_null());
+        let c_str = unsafe { CStr::from_ptr(json_ptr) };
+        let json_str = c_str.to_str().unwrap();
+        assert!(json_str.contains("Heading"));
+        assert!(json_str.contains("Paragraph"));
+        free_string_ffi(json_ptr);
+    }
+
+    #[test]
+    fn test_serialize_article_to_json_ffi() {
+        let html = CString::new("<h1>Title</h1>").unwrap();
+        let article_ptr = parse_html_ffi(html.as_ptr());
+        assert!(!article_ptr.is_null());
+        let json_ptr = serialize_article_to_json_ffi(article_ptr);
+        assert!(!json_ptr.is_null());
+        let c_str = unsafe { CStr::from_ptr(json_ptr) };
+        let json_str = c_str.to_str().unwrap();
+        assert!(json_str.contains("Title"));
+        free_string_ffi(json_ptr);
+        free_article_ffi(article_ptr);
+    }
+}
+

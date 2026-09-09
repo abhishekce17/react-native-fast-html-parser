@@ -27,6 +27,8 @@ extern "C" {
     void free_article_ffi(ParsedArticle* article);
     size_t get_block_count(const ParsedArticle* article);
     void free_string_ffi(char* s);
+    char* parse_html_to_json_ffi(const char* html);
+    char* serialize_article_to_json_ffi(const ParsedArticle* article);
 
     const ContentBlock* get_block_by_index(const ParsedArticle* article, size_t index);
     char* get_block_type_ptr(const ContentBlock* block);
@@ -213,6 +215,7 @@ public:
 
     double getLength() override;
     std::variant<std::shared_ptr<HybridContentBlockSpec>, NullType> getBlock(double index) override;
+    std::string toJSON() override;
 };
 
 // ── HybridFastHtmlParser ─────────────────────────────────────────────────────
@@ -221,6 +224,7 @@ public:
     HybridFastHtmlParser() : HybridObject("FastHtmlParser"), HybridFastHtmlParserSpec() {}
 
     std::variant<std::shared_ptr<HybridParsedArticleSpec>, NullType> parse(const std::string& html) override;
+    std::string parseToJSON(const std::string& html) override;
 };
 
 } // namespace margelo::nitro::fasthtmlparser

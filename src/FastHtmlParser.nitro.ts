@@ -78,6 +78,7 @@ export interface ParsedArticle extends HybridObject<{
 }> {
   readonly length: number;
   getBlock(index: number): ContentBlock | null;
+  toJSON(): string;
 }
 
 export interface FastHtmlParser extends HybridObject<{
@@ -85,4 +86,5 @@ export interface FastHtmlParser extends HybridObject<{
   android: 'c++';
 }> {
   parse(html: string): ParsedArticle | null;
+  parseToJSON(html: string): string;
 }

@@ -100,14 +100,17 @@ export function ArticleScreen({ html }: { html: string }) {
 `;
 
 // Long document for Virtualized tab — 40+ paragraphs
-const LONG_HTML = Array.from({ length: 40 }, (_, i) => `
+const LONG_HTML = Array.from(
+  { length: 40 },
+  (_, i) => `
 <h${(i % 3) + 2}>Section ${i + 1}: Native Performance</h${(i % 3) + 2}>
 <p>This is paragraph ${i + 1}. The <b>VirtualizedHtmlRenderer</b> uses
 <i>FlatList</i> row recycling, so only the visible blocks are mounted in React.
 Long articles of any length stay at <code>120 FPS</code> scroll.</p>
 ${i % 5 === 0 ? `<blockquote><p>Virtualization milestone at block ${i + 1}.</p></blockquote>` : ''}
 ${i % 7 === 0 ? `<ul><li>Item A in section ${i + 1}</li><li>Item B</li></ul>` : ''}
-`).join('');
+`
+).join('');
 
 // ─── Tab navigation ──────────────────────────────────────────────────────────
 
@@ -137,7 +140,10 @@ const CustomLink: CustomInlineRenderer = ({ node }) => (
     onPress={() => Alert.alert('Link pressed', node.url)}
     accessibilityRole="link"
   >
-    {node.text || getChildren(null as any).map((c) => c.text).join('')}
+    {node.text ||
+      getChildren(null as any)
+        .map((c) => c.text)
+        .join('')}
   </Text>
 );
 
@@ -154,14 +160,23 @@ function RenderedTab({ parsedAst }: { parsedAst: ParsedArticle | null }) {
         Using &lt;HtmlRenderer parsedAst=&#123;…&#125; /&gt;
       </Text>
       <Text style={styles.sectionHint}>
-        Custom CodeBlock renderer, custom Bold/Link inline renderers, tagsStyles overrides.
+        Custom CodeBlock renderer, custom Bold/Link inline renderers, tagsStyles
+        overrides.
       </Text>
       <View style={styles.card}>
         <HtmlRenderer
           parsedAst={parsedAst}
           tagsStyles={{
-            h1: { fontSize: 24, color: '#7c3aed', fontWeight: '800' } as TextStyle,
-            h2: { fontSize: 18, color: '#1e40af', fontWeight: '700' } as TextStyle,
+            h1: {
+              fontSize: 24,
+              color: '#7c3aed',
+              fontWeight: '800',
+            } as TextStyle,
+            h2: {
+              fontSize: 18,
+              color: '#1e40af',
+              fontWeight: '700',
+            } as TextStyle,
             a: { color: '#2563eb' } as TextStyle,
             blockquote: { borderLeftColor: '#7c3aed' },
           }}
@@ -194,14 +209,16 @@ function VirtualizedTab() {
         <View style={styles.virtualHeader}>
           <Text style={styles.virtualHeaderTitle}>VirtualizedHtmlRenderer</Text>
           <Text style={styles.virtualHeaderSub}>
-            {getBlocks(parseHTML(LONG_HTML)).length} blocks · FlatList recycling · 120 FPS
+            {getBlocks(parseHTML(LONG_HTML)).length} blocks · FlatList recycling
+            · 120 FPS
           </Text>
         </View>
       }
       ListFooterComponent={
         <View style={styles.virtualFooter}>
           <Text style={styles.virtualFooterText}>
-            ✅ End of document — all {getBlocks(parseHTML(LONG_HTML)).length} blocks rendered.
+            ✅ End of document — all {getBlocks(parseHTML(LONG_HTML)).length}{' '}
+            blocks rendered.
           </Text>
         </View>
       }
@@ -244,7 +261,10 @@ function WrappersTab({ parsedAst }: { parsedAst: ParsedArticle | null }) {
     const list = blocks.find((b: ContentBlock) => b.type === 'List');
     if (list) {
       const items = getItems(list);
-      result.push({ label: 'getItems(list).length', value: String(items.length) });
+      result.push({
+        label: 'getItems(list).length',
+        value: String(items.length),
+      });
 
       // getNestedBlocks — from items
       items.forEach((item, i) => {
@@ -262,10 +282,16 @@ function WrappersTab({ parsedAst }: { parsedAst: ParsedArticle | null }) {
     const table = blocks.find((b: ContentBlock) => b.type === 'Table');
     if (table) {
       const rows2 = getRows(table);
-      result.push({ label: 'getRows(table).length', value: String(rows2.length) });
+      result.push({
+        label: 'getRows(table).length',
+        value: String(rows2.length),
+      });
       if (rows2[0]) {
         const cells = getCells(rows2[0]);
-        result.push({ label: 'getCells(row[0]).length', value: String(cells.length) });
+        result.push({
+          label: 'getCells(row[0]).length',
+          value: String(cells.length),
+        });
         result.push({
           label: 'Cell[0] text',
           value: getChildren(cells[0] ?? null)
@@ -279,14 +305,20 @@ function WrappersTab({ parsedAst }: { parsedAst: ParsedArticle | null }) {
     const quote = blocks.find((b: ContentBlock) => b.type === 'Quote');
     if (quote) {
       const qc = getQuoteChildren(quote);
-      result.push({ label: 'getQuoteChildren(quote).length', value: String(qc.length) });
+      result.push({
+        label: 'getQuoteChildren(quote).length',
+        value: String(qc.length),
+      });
     }
 
     // getDefItems — from DefinitionList
     const dl = blocks.find((b: ContentBlock) => b.type === 'DefinitionList');
     if (dl) {
       const defs = getDefItems(dl);
-      result.push({ label: 'getDefItems(dl).length', value: String(defs.length) });
+      result.push({
+        label: 'getDefItems(dl).length',
+        value: String(defs.length),
+      });
       if (defs[0]) {
         result.push({
           label: 'defItems[0] term',
@@ -294,7 +326,9 @@ function WrappersTab({ parsedAst }: { parsedAst: ParsedArticle | null }) {
         });
         result.push({
           label: 'defItems[0] definition',
-          value: defs[0].getDef(0)?.text ? (defs[0].getDef(0)!.text.slice(0, 40) + '…') : '—',
+          value: defs[0].getDef(0)?.text
+            ? defs[0].getDef(0)!.text.slice(0, 40) + '…'
+            : '—',
         });
       }
     }
@@ -306,8 +340,9 @@ function WrappersTab({ parsedAst }: { parsedAst: ParsedArticle | null }) {
     <ScrollView contentContainerStyle={styles.tabContent}>
       <Text style={styles.sectionLabel}>AST Traversal Wrappers</Text>
       <Text style={styles.sectionHint}>
-        getBlocks · getChildren · getItems · getNestedBlocks · getRows · getCells ·
-        getQuoteChildren · getDefItems — all called on the same ParsedArticle.
+        getBlocks · getChildren · getItems · getNestedBlocks · getRows ·
+        getCells · getQuoteChildren · getDefItems — all called on the same
+        ParsedArticle.
       </Text>
       {rows.map((row, i) => (
         <View key={i} style={styles.wrapperRow}>
@@ -349,7 +384,10 @@ function JsonTab({ parsedAst }: { parsedAst: ParsedArticle | null }) {
           }),
           paragraph: (block, _i) => ({
             kind: 'paragraph',
-            summary: `${(block as any).children?.map((c: any) => c.text).join('').slice(0, 60)}…`,
+            summary: `${(block as any).children
+              ?.map((c: any) => c.text)
+              .join('')
+              .slice(0, 60)}…`,
           }),
         },
         transformBlock: (block) => ({ kind: block.type, summary: block.type }),
@@ -392,7 +430,12 @@ function JsonTab({ parsedAst }: { parsedAst: ParsedArticle | null }) {
             style={[styles.modeBtn, mode === key && styles.activeModeBtn]}
             onPress={() => setMode(key)}
           >
-            <Text style={[styles.modeBtnText, mode === key && styles.activeModeBtnText]}>
+            <Text
+              style={[
+                styles.modeBtnText,
+                mode === key && styles.activeModeBtnText,
+              ]}
+            >
               {label}
             </Text>
           </TouchableOpacity>
@@ -409,7 +452,10 @@ function JsonTab({ parsedAst }: { parsedAst: ParsedArticle | null }) {
       </Text>
 
       {/* JSON output */}
-      <ScrollView style={styles.jsonScroll} contentContainerStyle={styles.jsonScrollContent}>
+      <ScrollView
+        style={styles.jsonScroll}
+        contentContainerStyle={styles.jsonScrollContent}
+      >
         <Text style={styles.jsonText}>{displayJson}</Text>
       </ScrollView>
     </View>
@@ -430,7 +476,9 @@ export default function App() {
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>react-native-fast-html-parser</Text>
-        <Text style={styles.headerSub}>{blockCount} blocks · Rust core · JSI</Text>
+        <Text style={styles.headerSub}>
+          {blockCount} blocks · Rust core · JSI
+        </Text>
       </View>
 
       {/* Tab bar */}
@@ -441,7 +489,12 @@ export default function App() {
             style={[styles.tabBtn, activeTab === tab && styles.activeTabBtn]}
             onPress={() => setActiveTab(tab)}
           >
-            <Text style={[styles.tabBtnText, activeTab === tab && styles.activeTabBtnText]}>
+            <Text
+              style={[
+                styles.tabBtnText,
+                activeTab === tab && styles.activeTabBtnText,
+              ]}
+            >
               {tab}
             </Text>
           </TouchableOpacity>

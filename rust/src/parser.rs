@@ -56,6 +56,7 @@ fn is_block_element(name: &str) -> bool {
             | "h5"
             | "h6"
             | "img"
+            | "picture"
             | "figure"
             | "ul"
             | "ol"
@@ -209,37 +210,133 @@ fn collect_text_recursive(node: NodeRef<Node>, acc: &mut String) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-fn extract_img_attributes(el: &scraper::node::Element) -> (String, Option<String>) {
-    let url = el
-        .attr("src")
-        .or_else(|| el.attr("data-src"))
-        .or_else(|| el.attr("data-original"))
-        .or_else(|| el.attr("data-url"))
-        .map(|s| clean_attribute(&s))
-        .unwrap_or_default();
-    let alt = el.attr("alt").map(|s| clean_attribute(&s));
-    (url, alt)
-}
+fn extract_best_url_from_srcset(srcset: &str) -> Option<String> {
+    let cleaned = srcset.trim_matches(|c| c == '\\' || c == '"' || c == '\'');
+    let mut best_url: Option<String> = None;
+    let mut best_width: u32 = 0;
 
-fn get_image_from_node(node: NodeRef<Node>) -> Option<(String, Option<String>, Option<String>)> {
-    if let Node::Element(el) = node.value() {
-        if el.name() == "img" {
-            let (url, alt) = extract_img_attributes(el);
-            if !url.is_empty() {
-                return Some((url, alt, None));
+    for candidate in cleaned.split(',') {
+        let trimmed = candidate.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        let parts: Vec<&str> = trimmed.split_whitespace().collect();
+        if let Some(&first) = parts.first() {
+            let url = clean_attribute(first);
+            if url.is_empty() {
+                continue;
             }
-        } else if el.name() == "a" {
-            let link_url = el.attr("href").map(|s| clean_attribute(&s));
-            for child in node.children() {
-                if let Node::Element(child_el) = child.value() {
-                    if child_el.name() == "img" {
-                        let (url, alt) = extract_img_attributes(child_el);
-                        if !url.is_empty() {
-                            return Some((url, alt, link_url));
+            if best_url.is_none() {
+                best_url = Some(url.clone());
+            }
+            if parts.len() > 1 {
+                if let Some(descriptor) = parts.get(1) {
+                    if let Some(w) = descriptor.strip_suffix('w') {
+                        if let Ok(width_val) = w.parse::<u32>() {
+                            if width_val > best_width {
+                                best_width = width_val;
+                                best_url = Some(url);
+                            }
+                        }
+                    } else if let Some(x) = descriptor.strip_suffix('x') {
+                        if let Ok(density_val) = x.parse::<f32>() {
+                            let width_val = (density_val * 1000.0) as u32;
+                            if width_val > best_width {
+                                best_width = width_val;
+                                best_url = Some(url);
+                            }
                         }
                     }
                 }
             }
+        }
+    }
+    best_url
+}
+
+fn extract_img_attributes(el: &scraper::node::Element) -> (String, Option<String>) {
+    let mut raw_url = el
+        .attr("src")
+        .map(|s| clean_attribute(&s))
+        .unwrap_or_default();
+
+    let is_placeholder = raw_url.is_empty()
+        || (raw_url.starts_with("data:image/") && raw_url.len() < 300);
+
+    if is_placeholder {
+        if let Some(lazy) = el
+            .attr("data-src")
+            .or_else(|| el.attr("data-original"))
+            .or_else(|| el.attr("data-url"))
+            .or_else(|| el.attr("data-lazy-src"))
+            .or_else(|| el.attr("data-actualsrc"))
+            .or_else(|| el.attr("data-orig-file"))
+            .or_else(|| el.attr("data-full-url"))
+            .or_else(|| el.attr("data-hi-res-src"))
+        {
+            let cleaned = clean_attribute(lazy);
+            if !cleaned.is_empty() {
+                raw_url = cleaned;
+            }
+        }
+    }
+
+    if is_placeholder || raw_url.is_empty() {
+        if let Some(srcset) = el.attr("srcset").or_else(|| el.attr("data-srcset")) {
+            if let Some(url_from_srcset) = extract_best_url_from_srcset(srcset) {
+                raw_url = url_from_srcset;
+            }
+        }
+    }
+
+    let alt = el.attr("alt").map(|s| clean_attribute(&s));
+    (raw_url, alt)
+}
+
+fn find_image_in_subtree(node: NodeRef<Node>) -> Option<(String, Option<String>, Option<String>)> {
+    if let Node::Element(el) = node.value() {
+        match el.name() {
+            "img" => {
+                let (url, alt) = extract_img_attributes(el);
+                if !url.is_empty() {
+                    return Some((url, alt, None));
+                }
+            }
+            "picture" => {
+                for child in node.children() {
+                    if let Node::Element(child_el) = child.value() {
+                        if child_el.name() == "source" {
+                            if let Some(srcset) = child_el.attr("srcset").or_else(|| child_el.attr("src")) {
+                                if let Some(url) = extract_best_url_from_srcset(srcset) {
+                                    let alt = child_el.attr("alt").map(|s| clean_attribute(&s));
+                                    return Some((url, alt, None));
+                                }
+                            }
+                        } else if child_el.name() == "img" {
+                            let (url, alt) = extract_img_attributes(child_el);
+                            if !url.is_empty() {
+                                return Some((url, alt, None));
+                            }
+                        }
+                    }
+                }
+            }
+            "a" => {
+                let link_url = el.attr("href").map(|s| clean_attribute(&s));
+                for child in node.children() {
+                    if let Some((url, alt, _)) = find_image_in_subtree(child) {
+                        return Some((url, alt, link_url));
+                    }
+                }
+            }
+            "span" | "div" | "figure" | "noscript" | "p" => {
+                for child in node.children() {
+                    if let Some((url, alt, link)) = find_image_in_subtree(child) {
+                        return Some((url, alt, link));
+                    }
+                }
+            }
+            _ => {}
         }
     }
     None
@@ -299,7 +396,7 @@ where
                             let mut had_image = false;
 
                             for child in node.children() {
-                                if let Some((img_url, img_alt, img_link)) = get_image_from_node(child) {
+                                if let Some((img_url, img_alt, img_link)) = find_image_in_subtree(child) {
                                     had_image = true;
                                     normalize_inline_nodes(&mut p_inlines);
                                     if !p_inlines.is_empty() {
@@ -344,6 +441,17 @@ where
                             });
                         }
 
+                        // ── Picture container ─────────────────────────────────
+                        "picture" => {
+                            if let Some((url, alt, link_url)) = find_image_in_subtree(node) {
+                                blocks.push(ContentBlock::Image {
+                                    url,
+                                    alt,
+                                    link_url,
+                                });
+                            }
+                        }
+
                         // ── Figure (image + optional caption + optional link) ──
                         "figure" => {
                             let mut url = String::new();
@@ -353,32 +461,19 @@ where
 
                             for child in node.children() {
                                 if let Node::Element(el) = child.value() {
-                                    match el.name() {
-                                        "img" => {
-                                            let (img_url, img_alt) = extract_img_attributes(el);
+                                    if el.name() == "figcaption" {
+                                        let text = collect_text(child).trim().to_string();
+                                        if !text.is_empty() {
+                                            caption = Some(text);
+                                        }
+                                    } else if let Some((img_url, img_alt, img_link)) = find_image_in_subtree(child) {
+                                        if !img_url.is_empty() {
                                             url = img_url;
                                             alt = img_alt;
-                                        }
-                                        "a" => {
-                                            let a_href = el.attr("href").map(|s| clean_attribute(&s));
-                                            for sub in child.children() {
-                                                if let Node::Element(sub_el) = sub.value() {
-                                                    if sub_el.name() == "img" {
-                                                        let (img_url, img_alt) = extract_img_attributes(sub_el);
-                                                        url = img_url;
-                                                        alt = img_alt;
-                                                        link_url = a_href.clone();
-                                                    }
-                                                }
+                                            if img_link.is_some() {
+                                                link_url = img_link;
                                             }
                                         }
-                                        "figcaption" => {
-                                            let text = collect_text(child).trim().to_string();
-                                            if !text.is_empty() {
-                                                caption = Some(text);
-                                            }
-                                        }
-                                        _ => {}
                                     }
                                 }
                             }
@@ -1778,6 +1873,67 @@ mod tests {
         let parsed_json: serde_json::Value = serde_json::from_str(&json_str).expect("Deserialization failed");
         assert!(parsed_json.is_array());
         assert_eq!(parsed_json.as_array().unwrap().len(), 8);
+    }
+
+    #[test]
+    fn test_picture_and_lazy_images() {
+        let html = r#"
+            <picture>
+                <source srcset="https://example.com/receipt-small.webp 400w, https://example.com/receipt-large.webp 1200w" />
+                <img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-src="https://example.com/receipt.png" alt="Receipt" />
+            </picture>
+            <p>
+                <span class="img-wrap">
+                    <img srcset="https://example.com/thumb.jpg 300w, https://example.com/full.jpg 1000w" alt="Full Image" />
+                </span>
+            </p>
+        "#;
+        let blocks = parse_html(html);
+        assert_eq!(blocks.len(), 2);
+
+        match &blocks[0] {
+            ContentBlock::Image { url, .. } => {
+                assert!(url.contains("receipt"));
+            }
+            _ => panic!("Expected Image block"),
+        }
+
+        match &blocks[1] {
+            ContentBlock::Image { url, .. } => {
+                assert_eq!(url, "https://example.com/full.jpg");
+            }
+            _ => panic!("Expected Image block"),
+        }
+    }
+
+    #[test]
+    fn test_devto_receipt_image() {
+        let html = r#"
+            <p>The savings are also auditable rather than a vibe. Every request writes to a local ledger with its real cost and the counterfactual of what a frontier-only run would have cost, so the report is arithmetic you can check. A real receipt from one of my sessions:</p>
+            <p><a href="https://media2.dev.to/dynamic/image/width=800%2Cheight=%2Cfit=scale-down%2Cgravity=auto%2Cformat=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Ffo0hpgcvhvigtpjof6g0.png" class="article-body-image-wrapper"><img src="https://media2.dev.to/dynamic/image/width=800%2Cheight=%2Cfit=scale-down%2Cgravity=auto%2Cformat=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Ffo0hpgcvhvigtpjof6g0.png" alt="coding-agent-router savings report: $0.12 spent vs $1.23 frontier-only, 90% saved on that run" loading="lazy" width="800" height="336"></a></p>
+            <p>That run happened to route six requests to the cheap tier with zero frontier usage, which is realistic for a stretch of mechanical work and not representative of every session. A debugging-heavy afternoon escalates early and saves less. The honest claim is not a fixed percentage, it is that the routine majority of your calls stop being billed at frontier rates.</p>
+        "#;
+        let blocks = parse_html(html);
+        assert_eq!(blocks.len(), 3);
+
+        match &blocks[0] {
+            ContentBlock::Paragraph { .. } => {}
+            _ => panic!("Expected Paragraph block"),
+        }
+
+        match &blocks[1] {
+            ContentBlock::Image { url, alt, link_url } => {
+                assert!(url.contains("fo0hpgcvhvigtpjof6g0.png"));
+                assert!(alt.as_ref().unwrap().contains("coding-agent-router"));
+                assert!(link_url.is_some());
+            }
+            _ => panic!("Expected Image block at index 1"),
+        }
+
+        match &blocks[2] {
+            ContentBlock::Paragraph { .. } => {}
+            _ => panic!("Expected Paragraph block at index 2"),
+        }
     }
 }
 

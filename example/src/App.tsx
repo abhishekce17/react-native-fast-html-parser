@@ -197,7 +197,7 @@ function VirtualizedTab() {
   return (
     <VirtualizedHtmlRenderer
       parsedAst={longAst}
-      baseStyle={{ fontSize: 15, color: '#1e293b', lineHeight: 24 }}
+      baseStyle={styles.virtualBaseStyle}
       tagsStyles={{
         h2: { color: '#0369a1', fontWeight: '700' } as TextStyle,
         h3: { color: '#0891b2', fontWeight: '600' } as TextStyle,
@@ -744,5 +744,10 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#94a3b8',
     lineHeight: 18,
+  },
+  virtualBaseStyle: {
+    fontSize: 15,
+    color: '#1e293b',
+    lineHeight: 24,
   },
 });

@@ -158,7 +158,14 @@ export function HtmlRenderer({
           {ordered ? `${itemIndex + 1}. ` : '• '}
         </Text>
         <View style={styles.listItemContent}>
-          <Text style={[styles.paragraphText, baseStyle, tagsStyles.p, tagsStyles.li]}>
+          <Text
+            style={[
+              styles.paragraphText,
+              baseStyle,
+              tagsStyles.p,
+              tagsStyles.li,
+            ]}
+          >
             {inlineChildren.map((c, idx) => renderInlineNode(c, idx))}
           </Text>
           {nestedBlocks.map((nested, nIdx) => renderContentBlock(nested, nIdx))}

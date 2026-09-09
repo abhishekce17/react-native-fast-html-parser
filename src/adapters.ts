@@ -55,11 +55,11 @@ export interface CanonicalAdapterConfig<
 
 /**
  * Creates an application-owned canonical AST adapter that maps parser output
- * to your application's proprietary domain schema (e.g. Bytefeed Canonical Schema).
+ * to your application's proprietary domain schema (e.g. Custom Article Schema).
  *
  * @example
  * ```typescript
- * const bytefeedAdapter = createCanonicalAdapter({
+ * const articleAdapter = createCanonicalAdapter({
  *   transformBlock: (block) => ({
  *     id: block.id ?? `block-${Math.random()}`,
  *     type: block.type,
@@ -72,7 +72,7 @@ export interface CanonicalAdapterConfig<
  *   }),
  * });
  *
- * const canonicalDoc = bytefeedAdapter.adapt(parsedJsonArticle);
+ * const canonicalDoc = articleAdapter.adapt(parsedJsonArticle);
  * ```
  */
 export function createCanonicalAdapter<

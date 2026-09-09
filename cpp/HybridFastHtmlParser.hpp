@@ -35,6 +35,7 @@ extern "C" {
     uint8_t get_heading_level_ptr(const ContentBlock* block);
     char* get_image_url_ptr(const ContentBlock* block);
     char* get_image_alt_ptr(const ContentBlock* block);
+    char* get_image_link_url_ptr(const ContentBlock* block);
     char* get_codeblock_code_ptr(const ContentBlock* block);
     char* get_codeblock_lang_ptr(const ContentBlock* block);
     char* get_video_src_ptr(const ContentBlock* block);
@@ -177,6 +178,7 @@ public:
     std::string getUrl() override;
     std::string getAlt() override;
     std::string getCaption() override;
+    std::string getLinkUrl() override;
     std::string getCode() override;
     std::string getLanguage() override;
     std::string getSrc() override;

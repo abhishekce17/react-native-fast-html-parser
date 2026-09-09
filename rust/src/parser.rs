@@ -209,6 +209,42 @@ fn collect_text_recursive(node: NodeRef<Node>, acc: &mut String) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+fn extract_img_attributes(el: &scraper::node::Element) -> (String, Option<String>) {
+    let url = el
+        .attr("src")
+        .or_else(|| el.attr("data-src"))
+        .or_else(|| el.attr("data-original"))
+        .or_else(|| el.attr("data-url"))
+        .map(|s| clean_attribute(&s))
+        .unwrap_or_default();
+    let alt = el.attr("alt").map(|s| clean_attribute(&s));
+    (url, alt)
+}
+
+fn get_image_from_node(node: NodeRef<Node>) -> Option<(String, Option<String>, Option<String>)> {
+    if let Node::Element(el) = node.value() {
+        if el.name() == "img" {
+            let (url, alt) = extract_img_attributes(el);
+            if !url.is_empty() {
+                return Some((url, alt, None));
+            }
+        } else if el.name() == "a" {
+            let link_url = el.attr("href").map(|s| clean_attribute(&s));
+            for child in node.children() {
+                if let Node::Element(child_el) = child.value() {
+                    if child_el.name() == "img" {
+                        let (url, alt) = extract_img_attributes(child_el);
+                        if !url.is_empty() {
+                            return Some((url, alt, link_url));
+                        }
+                    }
+                }
+            }
+        }
+    }
+    None
+}
+
 // Block parser
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -257,11 +293,37 @@ where
                     flush(&mut pending_inlines, &mut blocks);
 
                     match tag {
-                        // ── Paragraph ─────────────────────────────────────────
+                        // ── Paragraph (with native embedded/wrapped image support) ──
                         "p" => {
-                            let mut children = parse_inline_nodes(node.children());
-                            normalize_inline_nodes(&mut children);
-                            blocks.push(ContentBlock::Paragraph { children });
+                            let mut p_inlines: Vec<InlineNode> = Vec::new();
+                            let mut had_image = false;
+
+                            for child in node.children() {
+                                if let Some((img_url, img_alt, img_link)) = get_image_from_node(child) {
+                                    had_image = true;
+                                    normalize_inline_nodes(&mut p_inlines);
+                                    if !p_inlines.is_empty() {
+                                        blocks.push(ContentBlock::Paragraph {
+                                            children: p_inlines.clone(),
+                                        });
+                                        p_inlines.clear();
+                                    }
+                                    blocks.push(ContentBlock::Image {
+                                        url: img_url,
+                                        alt: img_alt,
+                                        link_url: img_link,
+                                    });
+                                } else {
+                                    parse_inline_node(child, &mut p_inlines);
+                                }
+                            }
+
+                            normalize_inline_nodes(&mut p_inlines);
+                            if !had_image || !p_inlines.is_empty() {
+                                blocks.push(ContentBlock::Paragraph {
+                                    children: p_inlines,
+                                });
+                            }
                         }
 
                         // ── Headings ──────────────────────────────────────────
@@ -274,29 +336,41 @@ where
 
                         // ── Standalone image ──────────────────────────────────
                         "img" => {
-                            let url = element
-                                .attr("src")
-                                .map(|s| clean_attribute(&s))
-                                .unwrap_or_default();
-                            let alt = element.attr("alt").map(|s| clean_attribute(&s));
-                            blocks.push(ContentBlock::Image { url, alt });
+                            let (url, alt) = extract_img_attributes(element);
+                            blocks.push(ContentBlock::Image {
+                                url,
+                                alt,
+                                link_url: None,
+                            });
                         }
 
-                        // ── Figure (image + optional caption) ─────────────────
+                        // ── Figure (image + optional caption + optional link) ──
                         "figure" => {
                             let mut url = String::new();
                             let mut alt: Option<String> = None;
                             let mut caption: Option<String> = None;
+                            let mut link_url: Option<String> = None;
 
                             for child in node.children() {
                                 if let Node::Element(el) = child.value() {
                                     match el.name() {
                                         "img" => {
-                                            url = el
-                                                .attr("src")
-                                                .map(|s| clean_attribute(&s))
-                                                .unwrap_or_default();
-                                            alt = el.attr("alt").map(|s| clean_attribute(&s));
+                                            let (img_url, img_alt) = extract_img_attributes(el);
+                                            url = img_url;
+                                            alt = img_alt;
+                                        }
+                                        "a" => {
+                                            let a_href = el.attr("href").map(|s| clean_attribute(&s));
+                                            for sub in child.children() {
+                                                if let Node::Element(sub_el) = sub.value() {
+                                                    if sub_el.name() == "img" {
+                                                        let (img_url, img_alt) = extract_img_attributes(sub_el);
+                                                        url = img_url;
+                                                        alt = img_alt;
+                                                        link_url = a_href.clone();
+                                                    }
+                                                }
+                                            }
                                         }
                                         "figcaption" => {
                                             let text = collect_text(child).trim().to_string();
@@ -308,7 +382,12 @@ where
                                     }
                                 }
                             }
-                            blocks.push(ContentBlock::Figure { url, alt, caption });
+                            blocks.push(ContentBlock::Figure {
+                                url,
+                                alt,
+                                caption,
+                                link_url,
+                            });
                         }
 
                         // ── Lists — supports nested lists inside <li> ──────────
@@ -1231,6 +1310,75 @@ mod tests {
     // ── Group 6: Media, Figures & Embeds ──────────────────────────────────────
 
     #[test]
+    fn test_paragraph_with_wrapped_and_linked_images() {
+        let html = r#"
+            <p><img src="https://example.com/standalone.png" alt="Standalone in p" /></p>
+            <p><a href="https://example.com/full"><img src="https://example.com/linked.png" alt="Linked in p a" /></a></p>
+            <p>Intro text <img src="https://example.com/inline.png" alt="Middle img" /> Outro text</p>
+            <img data-src="https://example.com/lazy.png" alt="Lazy data-src" />
+        "#;
+        let blocks = parse_html(html);
+        assert_eq!(blocks.len(), 6);
+
+        match &blocks[0] {
+            ContentBlock::Image { url, alt, link_url } => {
+                assert_eq!(url, "https://example.com/standalone.png");
+                assert_eq!(alt.as_deref(), Some("Standalone in p"));
+                assert_eq!(link_url.as_deref(), None);
+            }
+            _ => panic!("Expected Image for wrapped p > img"),
+        }
+
+        match &blocks[1] {
+            ContentBlock::Image { url, alt, link_url } => {
+                assert_eq!(url, "https://example.com/linked.png");
+                assert_eq!(alt.as_deref(), Some("Linked in p a"));
+                assert_eq!(link_url.as_deref(), Some("https://example.com/full"));
+            }
+            _ => panic!("Expected Image for linked p > a > img"),
+        }
+
+        match &blocks[2] {
+            ContentBlock::Paragraph { children } => {
+                match &children[0] {
+                    InlineNode::Text { text } => assert_eq!(text, "Intro text"),
+                    _ => panic!("Expected Text node"),
+                }
+            }
+            _ => panic!("Expected Paragraph intro"),
+        }
+
+        match &blocks[3] {
+            ContentBlock::Image { url, alt, link_url } => {
+                assert_eq!(url, "https://example.com/inline.png");
+                assert_eq!(alt.as_deref(), Some("Middle img"));
+                assert_eq!(link_url.as_deref(), None);
+            }
+            _ => panic!("Expected Image middle"),
+        }
+
+        match &blocks[4] {
+            ContentBlock::Paragraph { children } => {
+                match &children[0] {
+                    InlineNode::Text { text } => assert_eq!(text, "Outro text"),
+                    _ => panic!("Expected Text node"),
+                }
+            }
+            _ => panic!("Expected Paragraph outro"),
+        }
+
+        match &blocks[5] {
+            ContentBlock::Image { url, alt, link_url } => {
+                assert_eq!(url, "https://example.com/lazy.png");
+                assert_eq!(alt.as_deref(), Some("Lazy data-src"));
+                assert_eq!(link_url.as_deref(), None);
+            }
+            _ => panic!("Expected Image lazy data-src"),
+        }
+    }
+
+
+    #[test]
     fn test_parse_media_and_embeds() {
         let html = r#"
             <img src="https://example.com/pic.jpg" alt="A photo" />
@@ -1247,7 +1395,7 @@ mod tests {
         assert_eq!(blocks.len(), 6);
 
         match &blocks[0] {
-            ContentBlock::Image { url, alt } => {
+            ContentBlock::Image { url, alt, .. } => {
                 assert_eq!(url, "https://example.com/pic.jpg");
                 assert_eq!(alt.as_deref(), Some("A photo"));
             }
@@ -1255,7 +1403,7 @@ mod tests {
         }
 
         match &blocks[1] {
-            ContentBlock::Figure { url, alt, caption } => {
+            ContentBlock::Figure { url, alt, caption, .. } => {
                 assert_eq!(url, "https://example.com/fig.png");
                 assert_eq!(alt.as_deref(), Some("Figure photo"));
                 assert_eq!(caption.as_deref(), Some("Figure caption text"));

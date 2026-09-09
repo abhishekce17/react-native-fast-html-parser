@@ -96,6 +96,9 @@ std::string HybridContentBlock::getAlt() {
 std::string HybridContentBlock::getCaption() {
     return getStringAndFree(get_figure_caption_ptr(m_block));
 }
+std::string HybridContentBlock::getLinkUrl() {
+    return getStringAndFree(get_image_link_url_ptr(m_block));
+}
 std::string HybridContentBlock::getCode() {
     return getStringAndFree(get_codeblock_code_ptr(m_block));
 }

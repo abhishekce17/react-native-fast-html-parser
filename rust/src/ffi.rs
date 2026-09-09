@@ -240,6 +240,18 @@ pub extern "C" fn get_image_alt_ptr(block: *const ContentBlock) -> *mut c_char {
 }
 
 #[unsafe(no_mangle)]
+pub extern "C" fn get_image_link_url_ptr(block: *const ContentBlock) -> *mut c_char {
+    if block.is_null() { return std::ptr::null_mut(); }
+    let block_ref = unsafe { &*block };
+    let link_url = match block_ref {
+        ContentBlock::Image { link_url, .. } => link_url.clone().unwrap_or_default(),
+        ContentBlock::Figure { link_url, .. } => link_url.clone().unwrap_or_default(),
+        _ => "".to_string(),
+    };
+    CString::new(link_url).unwrap().into_raw()
+}
+
+#[unsafe(no_mangle)]
 pub extern "C" fn get_codeblock_code_ptr(block: *const ContentBlock) -> *mut c_char {
     if block.is_null() { return std::ptr::null_mut(); }
     let block_ref = unsafe { &*block };

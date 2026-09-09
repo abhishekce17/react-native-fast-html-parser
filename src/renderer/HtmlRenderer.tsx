@@ -6,6 +6,7 @@ import {
   ScrollView,
   StyleSheet,
   Linking,
+  TouchableOpacity,
   type ImageStyle,
 } from 'react-native';
 import { parseHTML } from '../parser';
@@ -304,19 +305,32 @@ export function HtmlRenderer({
 
         case 'Image':
         case 'Figure': {
+          const imageEl = block.url ? (
+            <Image
+              source={{ uri: block.url }}
+              style={[styles.image, tagsStyles.img as ImageStyle]}
+              resizeMode="contain"
+              accessibilityLabel={block.alt || 'Image'}
+            />
+          ) : null;
+
           return (
             <View
               key={index}
               style={[styles.figureContainer, tagsStyles.figure]}
             >
-              {block.url ? (
-                <Image
-                  source={{ uri: block.url }}
-                  style={[styles.image, tagsStyles.img as ImageStyle]}
-                  resizeMode="contain"
-                  accessibilityLabel={block.alt || 'Image'}
-                />
-              ) : null}
+              {block.linkUrl && imageEl ? (
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => handleLinkPress(block.linkUrl)}
+                  accessibilityRole="link"
+                  accessibilityHint={block.linkUrl}
+                >
+                  {imageEl}
+                </TouchableOpacity>
+              ) : (
+                imageEl
+              )}
               {block.caption ? (
                 <Text style={[styles.caption, tagsStyles.figcaption]}>
                   {block.caption}

@@ -50,6 +50,7 @@ export interface ContentBlock extends HybridObject<{
   readonly url: string;
   readonly alt: string;
   readonly caption: string;
+  readonly linkUrl: string;
   readonly code: string;
   readonly language: string;
   readonly src: string;

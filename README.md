@@ -795,6 +795,7 @@ await AsyncStorage.setItem('cache', json);
 | `url`              | `string`                 | `Image`, `Figure`                   | Image asset URL.                                                                                                                                              |
 | `alt`              | `string`                 | `Image`, `Figure`                   | Accessibility alternative text.                                                                                                                               |
 | `caption`          | `string`                 | `Figure`, `Video`, `Audio`, `Embed` | Caption or subtitle text.                                                                                                                                     |
+| `linkUrl`          | `string`                 | `Image`, `Figure`                   | Destination hyperlink URL if the image is wrapped inside an `<a>` tag.                                                                                        |
 | `code`             | `string`                 | `CodeBlock`                         | Raw source code text.                                                                                                                                         |
 | `language`         | `string`                 | `CodeBlock`                         | Syntax language (e.g. `typescript`, `rust`, `python`).                                                                                                        |
 | `src`              | `string`                 | `Video`, `Audio`, `Embed`           | Media source URL or embed iframe target.                                                                                                                      |
@@ -997,8 +998,8 @@ for (let i = 0; i < dl.defItemCount; i++) {
 | **`Heading`**        | `level` (1-6), `childCount`, `getChild(i)` | `<h1>`, `<h2>`, `<h3>`, `<h4>`, `<h5>`, `<h6>`          |
 | **`List`**           | `ordered`, `itemCount`, `getItem(i)`       | `<ul>`, `<ol>`, `<li>`                                  |
 | **`Table`**          | `rowCount`, `getRow(i)`                    | `<table>`, `<thead>`, `<tbody>`, `<tr>`, `<th>`, `<td>` |
-| **`Image`**          | `url`, `alt`, `caption`                    | `<img>`, `<picture>`                                    |
-| **`Figure`**         | `url`, `alt`, `caption`                    | `<figure>`, `<figcaption>`                              |
+| **`Image`**          | `url`, `alt`, `linkUrl`                    | `<img>`, `<picture>`, `<p><img>`, `<a href="..."><img>` |
+| **`Figure`**         | `url`, `alt`, `caption`, `linkUrl`         | `<figure>`, `<figcaption>`                              |
 | **`CodeBlock`**      | `code`, `language`                         | `<pre><code>`                                           |
 | **`Quote`**          | `quoteChildCount`, `getQuoteChild(i)`      | `<blockquote>`, `<q>`                                   |
 | **`DefinitionList`** | `defItemCount`, `getDefItem(i)`            | `<dl>`, `<dt>`, `<dd>`                                  |

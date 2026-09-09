@@ -161,6 +161,7 @@ export interface ImageBlockData extends BaseBlockData {
   url: string;
   alt?: string;
   caption?: string;
+  linkUrl?: string;
   width?: number;
   height?: number;
 }

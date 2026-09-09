@@ -21,6 +21,8 @@ pub enum ContentBlock {
     Image {
         url: String,
         alt: Option<String>,
+        /// Optional hyperlink URL if the image is wrapped inside an `<a>` tag.
+        link_url: Option<String>,
     },
 
     /// A `<figure>` element that wraps an image with an optional `<figcaption>`.
@@ -28,6 +30,8 @@ pub enum ContentBlock {
         url: String,
         alt: Option<String>,
         caption: Option<String>,
+        /// Optional hyperlink URL if the figure's image is wrapped inside an `<a>` tag.
+        link_url: Option<String>,
     },
 
     /// A fenced code block — either `<pre><code>` or a `<div class="highlight">` wrapper.

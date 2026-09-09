@@ -148,11 +148,17 @@ export function HtmlRenderer({
 
     return (
       <View key={itemIndex} style={styles.listItemRow}>
-        <Text style={[styles.bullet, baseStyle, tagsStyles.li]}>
+        <Text
+          style={[
+            styles.bullet,
+            baseStyle ? { color: baseStyle.color } : null,
+            tagsStyles.li,
+          ]}
+        >
           {ordered ? `${itemIndex + 1}. ` : '• '}
         </Text>
         <View style={styles.listItemContent}>
-          <Text style={[styles.paragraphText, baseStyle, tagsStyles.p]}>
+          <Text style={[styles.paragraphText, baseStyle, tagsStyles.p, tagsStyles.li]}>
             {inlineChildren.map((c, idx) => renderInlineNode(c, idx))}
           </Text>
           {nestedBlocks.map((nested, nIdx) => renderContentBlock(nested, nIdx))}
@@ -172,23 +178,30 @@ export function HtmlRenderer({
         case 'Heading': {
           const children = getChildren(block);
           const level = block.level || 1;
+          const headingTag = `h${Math.min(Math.max(level, 1), 6)}`;
           const headingStyle =
             level === 1
-              ? [styles.h1, tagsStyles.h1]
+              ? styles.h1
               : level === 2
-                ? [styles.h2, tagsStyles.h2]
+                ? styles.h2
                 : level === 3
-                  ? [styles.h3, tagsStyles.h3]
+                  ? styles.h3
                   : level === 4
-                    ? [styles.h4, tagsStyles.h4]
+                    ? styles.h4
                     : level === 5
-                      ? [styles.h5, tagsStyles.h5]
-                      : [styles.h6, tagsStyles.h6];
+                      ? styles.h5
+                      : styles.h6;
 
           return (
             <Text
               key={index}
-              style={[styles.heading, headingStyle, baseStyle]}
+              style={[
+                styles.heading,
+                baseStyle,
+                headingStyle,
+                tagsStyles.h,
+                tagsStyles[headingTag],
+              ]}
               accessibilityRole="header"
               aria-level={level}
             >
@@ -264,7 +277,7 @@ export function HtmlRenderer({
                             style={[
                               styles.tableCell,
                               rIdx === 0 && styles.tableHeaderCell,
-                              tagsStyles.td,
+                              rIdx === 0 ? tagsStyles.th : tagsStyles.td,
                             ]}
                           >
                             <Text
@@ -272,6 +285,7 @@ export function HtmlRenderer({
                                 styles.tableCellText,
                                 rIdx === 0 && styles.tableHeaderCellText,
                                 baseStyle,
+                                rIdx === 0 ? tagsStyles.th : tagsStyles.td,
                               ]}
                             >
                               {cellChildren.map((c, idx) =>
@@ -332,7 +346,13 @@ export function HtmlRenderer({
                 imageEl
               )}
               {block.caption ? (
-                <Text style={[styles.caption, tagsStyles.figcaption]}>
+                <Text
+                  style={[
+                    styles.caption,
+                    baseStyle ? { color: baseStyle.color } : null,
+                    tagsStyles.figcaption,
+                  ]}
+                >
                   {block.caption}
                 </Text>
               ) : null}
@@ -409,12 +429,10 @@ const styles = StyleSheet.create({
   paragraphText: {
     fontSize: 16,
     lineHeight: 24,
-    color: '#334155',
     marginVertical: 6,
   },
   heading: {
     fontWeight: 'bold',
-    color: '#0f172a',
     marginVertical: 8,
   },
   h1: { fontSize: 28, lineHeight: 34 },
@@ -425,7 +443,6 @@ const styles = StyleSheet.create({
   h6: { fontSize: 14, lineHeight: 20 },
   bold: {
     fontWeight: 'bold',
-    color: '#0f172a',
   },
   italic: {
     fontStyle: 'italic',
@@ -436,8 +453,7 @@ const styles = StyleSheet.create({
   },
   inlineCode: {
     fontFamily: 'Courier',
-    backgroundColor: '#f1f5f9',
-    color: '#0f172a',
+    backgroundColor: 'rgba(148, 163, 184, 0.15)',
     fontSize: 14,
     paddingHorizontal: 4,
     borderRadius: 4,
@@ -473,8 +489,8 @@ const styles = StyleSheet.create({
   bullet: {
     fontSize: 16,
     lineHeight: 24,
-    color: '#475569',
     width: 20,
+    opacity: 0.8,
   },
   listItemContent: {
     flex: 1,
@@ -485,7 +501,7 @@ const styles = StyleSheet.create({
   },
   tableContainer: {
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: 'rgba(148, 163, 184, 0.25)',
     borderRadius: 6,
     overflow: 'hidden',
     minWidth: '100%',
@@ -493,30 +509,28 @@ const styles = StyleSheet.create({
   tableRow: {
     flexDirection: 'row',
     borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
+    borderBottomColor: 'rgba(148, 163, 184, 0.25)',
   },
   tableCell: {
     flex: 1,
     padding: 8,
   },
   tableHeaderCell: {
-    backgroundColor: '#f8fafc',
+    backgroundColor: 'rgba(148, 163, 184, 0.1)',
   },
   tableCellText: {
     fontSize: 14,
-    color: '#334155',
   },
   tableHeaderCellText: {
     fontWeight: 'bold',
-    color: '#0f172a',
   },
   quoteContainer: {
     borderLeftWidth: 4,
     borderLeftColor: '#94a3b8',
     paddingLeft: 12,
     marginVertical: 8,
-    backgroundColor: '#f8fafc',
-    paddingVertical: 4,
+    backgroundColor: 'rgba(148, 163, 184, 0.08)',
+    paddingVertical: 6,
     borderRadius: 2,
   },
   figureContainer: {
@@ -530,10 +544,10 @@ const styles = StyleSheet.create({
   },
   caption: {
     fontSize: 13,
-    color: '#64748b',
     fontStyle: 'italic',
     marginTop: 4,
     textAlign: 'center',
+    opacity: 0.75,
   },
   defListContainer: {
     marginVertical: 8,
@@ -544,17 +558,16 @@ const styles = StyleSheet.create({
   defTerm: {
     fontWeight: 'bold',
     fontSize: 15,
-    color: '#0f172a',
   },
   defDesc: {
     fontSize: 15,
-    color: '#475569',
     paddingLeft: 12,
     marginTop: 2,
+    opacity: 0.85,
   },
   separator: {
     height: 1,
-    backgroundColor: '#e2e8f0',
+    backgroundColor: 'rgba(148, 163, 184, 0.25)',
     marginVertical: 14,
   },
 });

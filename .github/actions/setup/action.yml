@@ -23,7 +23,6 @@ runs:
 
     - name: Install dependencies
       if: steps.yarn-cache.outputs.cache-hit != 'true'
-      # Skip postinstall in CI — native binaries are built directly from Rust source
       run: yarn install --immutable --mode=skip-build
       shell: bash
 

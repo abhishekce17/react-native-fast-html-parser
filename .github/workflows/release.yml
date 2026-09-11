@@ -6,134 +6,73 @@ on:
       - 'v*'
 
 jobs:
-  build-ios:
-    name: Build iOS Binaries
-    runs-on: macos-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: aarch64-apple-ios,aarch64-apple-ios-sim
-
-      - name: Cache Rust
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            rust/target
-          key: ${{ runner.os }}-cargo-ios-${{ hashFiles('rust/Cargo.lock') }}
-
-      - name: Build for iOS device (aarch64-apple-ios)
-        run: cargo build --manifest-path rust/Cargo.toml --target aarch64-apple-ios --release
-
-      - name: Build for iOS Simulator (aarch64-apple-ios-sim)
-        run: cargo build --manifest-path rust/Cargo.toml --target aarch64-apple-ios-sim --release
-
-      - name: Strip debug symbols
-        run: |
-          strip -S rust/target/aarch64-apple-ios/release/libhtml_2_json.a
-          strip -S rust/target/aarch64-apple-ios-sim/release/libhtml_2_json.a
-
-      - name: Copy and merge artifacts
-        run: |
-          cp rust/target/aarch64-apple-ios/release/libhtml_2_json.a libhtml_2_json-ios-device.a
-          cp rust/target/aarch64-apple-ios-sim/release/libhtml_2_json.a libhtml_2_json-ios-sim.a
-
-      - name: Upload iOS artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: ios-binaries
-          path: |
-            libhtml_2_json-ios-device.a
-            libhtml_2_json-ios-sim.a
-
-  build-android:
-    name: Build Android Binaries
+  validate-and-build:
+    name: Validate & Build Package
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+      - name: Setup
+        uses: ./.github/actions/setup
 
-      - name: Install cargo-ndk
-        run: cargo install cargo-ndk
+      - name: Lint
+        run: yarn lint
 
-      - name: Setup Android NDK
-        uses: android-actions/setup-android@v3
+      - name: Typecheck
+        run: yarn typecheck
 
-      - name: Cache Rust
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            rust/target
-          key: ${{ runner.os }}-cargo-android-${{ hashFiles('rust/Cargo.lock') }}
+      - name: Test
+        run: yarn test
 
-      - name: Build for all Android ABIs
-        run: |
-          cd rust
-          cargo ndk \
-            -t arm64-v8a \
-            -t armeabi-v7a \
-            -t x86 \
-            -t x86_64 \
-            -o ../jniLibs \
-            build --release
+      - name: Build package
+        run: yarn prepare
 
-      - name: Rename artifacts
-        run: |
-          cp jniLibs/arm64-v8a/libhtml_2_json.so    libhtml_2_json-android-arm64-v8a.so
-          cp jniLibs/armeabi-v7a/libhtml_2_json.so  libhtml_2_json-android-armeabi-v7a.so
-          cp jniLibs/x86/libhtml_2_json.so          libhtml_2_json-android-x86.so
-          cp jniLibs/x86_64/libhtml_2_json.so       libhtml_2_json-android-x86_64.so
+      - name: Dry-run npm pack
+        run: npm pack --dry-run
 
-      - name: Upload Android artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: android-binaries
-          path: |
-            libhtml_2_json-android-arm64-v8a.so
-            libhtml_2_json-android-armeabi-v7a.so
-            libhtml_2_json-android-x86.so
-            libhtml_2_json-android-x86_64.so
-
-  publish-release:
+  publish-github-release:
     name: Publish GitHub Release
     runs-on: ubuntu-latest
-    needs: [build-ios, build-android]
+    needs: [validate-and-build]
     permissions:
       contents: write
 
     steps:
-      - name: Download iOS binaries
-        uses: actions/download-artifact@v4
-        with:
-          name: ios-binaries
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Download Android binaries
-        uses: actions/download-artifact@v4
-        with:
-          name: android-binaries
-
-      - name: Create GitHub Release and upload binaries
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            libhtml_2_json-ios-device.a
-            libhtml_2_json-ios-sim.a
-            libhtml_2_json-android-arm64-v8a.so
-            libhtml_2_json-android-armeabi-v7a.so
-            libhtml_2_json-android-x86.so
-            libhtml_2_json-android-x86_64.so
           generate_release_notes: true
+
+  publish-npm:
+    name: Publish to NPM
+    runs-on: ubuntu-latest
+    needs: [validate-and-build, publish-github-release]
+    if: env.NPM_TOKEN != ''
+    env:
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: yarn install --immutable --mode=skip-build
+
+      - name: Build package
+        run: yarn prepare
+
+      - name: Publish to NPM
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

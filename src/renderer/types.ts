@@ -5,24 +5,30 @@ import type {
   InlineNode,
   ParsedArticle,
 } from '../FastHtmlParser.nitro';
+import type { NativeTextStyle } from '../NativeHtmlView.nitro';
+
+export type { NativeTextStyle };
 
 export type CustomBlockRenderer = React.ComponentType<{
   block: ContentBlock;
-  defaultRender: () => React.ReactElement | null;
   baseStyle?: TextStyle;
 }>;
 
 export type CustomInlineRenderer = React.ComponentType<{
   node: InlineNode;
-  defaultRender: () => React.ReactElement | null;
   baseStyle?: TextStyle;
 }>;
 
-export interface HtmlRendererProps {
+export interface FastHtmlViewProps {
   /**
-   * The raw HTML string to parse and render.
+   * The raw HTML string to parse and render natively.
    */
   html?: string;
+
+  /**
+   * Parsing execution mode: 'sync' (default) or 'async' (dispatched to C++ worker).
+   */
+  mode?: 'sync' | 'async';
 
   /**
    * An already-parsed AST object (optional, if parsed ahead of time).
@@ -32,7 +38,7 @@ export interface HtmlRendererProps {
   /**
    * Base text style applied to all rendered inline content.
    */
-  baseStyle?: TextStyle;
+  baseStyle?: TextStyle & { fontFeatureSettings?: string };
 
   /**
    * Custom style overrides for specific tags/blocks (e.g. `h1`, `h2`, `p`, `a`, `code`).
@@ -40,7 +46,7 @@ export interface HtmlRendererProps {
   tagsStyles?: Record<string, TextStyle | ViewStyle>;
 
   /**
-   * Custom component renderers for block elements.
+   * Custom component renderers for block elements (e.g., custom Video player, CodeBlock, Polls).
    */
   renderers?: {
     Paragraph?: CustomBlockRenderer;
@@ -60,17 +66,19 @@ export interface HtmlRendererProps {
   };
 
   /**
-   * Custom component renderers for inline elements.
+   * Enable or disable native continuous text selection. Defaults to `true`.
    */
-  inlineRenderers?: {
-    Text?: CustomInlineRenderer;
-    Bold?: CustomInlineRenderer;
-    Italic?: CustomInlineRenderer;
-    Link?: CustomInlineRenderer;
-    InlineCode?: CustomInlineRenderer;
-    Break?: CustomInlineRenderer;
-    [key: string]: CustomInlineRenderer | undefined;
-  };
+  selectable?: boolean;
+
+  /**
+   * Force 'light' | 'dark' theme mode or leave 'auto' to adapt to system dark mode.
+   */
+  themeMode?: 'light' | 'dark' | 'auto';
+
+  /**
+   * OpenType font feature settings (e.g. '"tnum" 1', '"liga" 1', '"frac" 1').
+   */
+  fontFeatureSettings?: string;
 
   /**
    * Callback fired when an `<a>` link node is pressed.
@@ -81,23 +89,6 @@ export interface HtmlRendererProps {
    * Style for the outer container.
    */
   style?: ViewStyle;
-}
-
-export interface VirtualizedHtmlRendererProps extends HtmlRendererProps {
-  /**
-   * Custom header component for the FlatList.
-   */
-  ListHeaderComponent?: React.ComponentType<any> | React.ReactElement | null;
-
-  /**
-   * Custom footer component for the FlatList.
-   */
-  ListFooterComponent?: React.ComponentType<any> | React.ReactElement | null;
-
-  /**
-   * Content container style for the FlatList.
-   */
-  contentContainerStyle?: ViewStyle;
 }
 
 // ── JSON AST Schema Contracts ───────────────────────────────────────────────

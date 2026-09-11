@@ -17,6 +17,16 @@
         "language": "c++",
         "implementationClassName": "HybridFastHtmlParser"
       }
+    },
+    "NativeHtmlView": {
+      "ios": {
+        "language": "swift",
+        "implementationClassName": "HybridNativeHtmlView"
+      },
+      "android": {
+        "language": "kotlin",
+        "implementationClassName": "HybridNativeHtmlView"
+      }
     }
   },
   "ignorePaths": ["node_modules"]

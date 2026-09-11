@@ -80,12 +80,22 @@ export interface ParsedArticle extends HybridObject<{
   readonly length: number;
   getBlock(index: number): ContentBlock | null;
   toJSON(): string;
+  toBuffer(): ArrayBuffer;
 }
 
 export interface FastHtmlParser extends HybridObject<{
   ios: 'c++';
   android: 'c++';
 }> {
+  // Fast sync height estimator — no full parse, called before parse() for Frame 0
+  estimateHeight(html: string, lineHeight: number): number;
+
+  // Synchronous HTML parse — returns ParsedArticle directly via JSI
   parse(html: string): ParsedArticle | null;
+
+  // Asynchronous HTML parse — dispatches to background thread and returns Promise
+  parseAsync(html: string): Promise<ParsedArticle | null>;
+
+  // JSON serialization helper (useful for debugging/caching)
   parseToJSON(html: string): string;
 }

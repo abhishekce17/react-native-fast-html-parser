@@ -1,7 +1,17 @@
-export { parseHTML, parseHTMLToJSON } from './parser';
+export {
+  parseHTML,
+  parseHTMLToJSON,
+  parseHTMLAsync,
+  estimateHtmlHeight,
+} from './parser';
 
-export { HtmlRenderer } from './renderer/HtmlRenderer';
-export { VirtualizedHtmlRenderer } from './renderer/VirtualizedHtmlRenderer';
+export {
+  FastHtmlView,
+  NativeHtmlView,
+  DefaultTableRenderer,
+  DefaultImageRenderer,
+  DefaultFigureRenderer,
+} from './renderer/FastHtmlView';
 export {
   createCanonicalAdapter,
   type CanonicalAdapterConfig,
@@ -29,3 +39,10 @@ export type {
   ParsedArticle,
   FastHtmlParser,
 } from './FastHtmlParser.nitro';
+
+export type {
+  NativeHtmlViewProps,
+  NativeHtmlViewMethods,
+  NativeTextStyle,
+  NativeHtmlView as NativeHtmlViewType,
+} from './NativeHtmlView.nitro';

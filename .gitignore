@@ -101,9 +101,5 @@ vendor/bundle/
 target/
 Thumbs.db
 
-# Precompiled native binaries (downloaded at install time via postinstall)
-ios/libs/
-android/src/main/jniLibs/
-
-# Rust compiled output
-rust/target/
+# Lexbor C++ HTML Parser (downloaded during pod install)
+cpp/lexbor/

@@ -11,7 +11,7 @@ Every HTML construct is assigned one of the following classification statuses:
 
 | Status | Meaning | Processing Behavior |
 | :--- | :--- | :--- |
-| **`SUPPORTED`** | First-class AST block or inline node. | Extracted with dedicated typed fields and rendered by built-in `<HtmlRenderer />`. |
+| **`SUPPORTED`** | First-class AST block or inline node. | Extracted with dedicated typed fields and rendered by built-in `<FastHtmlView />`. |
 | **`NORMALIZED`** | Flattened or restructured for mobile layout. | Wrapper elements (e.g. redundant `<div>` chains) are collapsed into semantic content blocks without losing text or inline children. |
 | **`PRESERVED`** | Retained in generic attributes or custom nodes. | Custom tags, `data-*`, `aria-*`, and arbitrary attributes are preserved in the AST and accessible via `customRenderers`. |
 | **`IGNORED`** | Discarded by design for security or safety. | Elements like `<script>`, `<style>`, and `<meta>` are discarded to prevent security vulnerabilities or styling conflicts with React Native. |
@@ -135,7 +135,7 @@ Every HTML construct is assigned one of the following classification statuses:
 
 ## 11. HTML Entity Decoding Table
 
-All standard HTML5 entities are decoded natively in compiled Rust before AST generation:
+All standard HTML5 entities are decoded natively in compiled C++ (Lexbor) before AST generation:
 
 | Entity Type | Examples | Decoded Output |
 | :--- | :--- | :--- |

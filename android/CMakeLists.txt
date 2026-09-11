@@ -5,6 +5,15 @@ set(PACKAGE_NAME fasthtmlparser)
 set(CMAKE_VERBOSE_MAKEFILE ON)
 set(CMAKE_CXX_STANDARD 20)
 
+# ── Lexbor HTML parser (downloaded at build time via FetchContent) ────────────
+include(FetchContent)
+FetchContent_Declare(
+  lexbor
+  GIT_REPOSITORY https://github.com/lexbor/lexbor.git
+  GIT_TAG        v2.3.0
+)
+FetchContent_MakeAvailable(lexbor)
+
 # Define C++ library and compile all sources
 add_library(${PACKAGE_NAME} SHARED
     src/main/cpp/cpp-adapter.cpp
@@ -17,8 +26,8 @@ include(${CMAKE_SOURCE_DIR}/../nitrogen/generated/android/fasthtmlparser+autolin
 # Set up local includes
 include_directories("src/main/cpp" "../cpp")
 
-# Tell the linker where to search for the precompiled Rust shared library for this target
-target_link_directories(${PACKAGE_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/main/jniLibs/${ANDROID_ABI})
+# Include Lexbor headers
+target_include_directories(${PACKAGE_NAME} PRIVATE ${lexbor_SOURCE_DIR}/source)
 
 find_library(LOG_LIB log)
 
@@ -26,6 +35,6 @@ find_library(LOG_LIB log)
 target_link_libraries(
         ${PACKAGE_NAME}
         ${LOG_LIB}
-        android # <-- Android core
-        html_2_json # <-- Link precompiled Rust library by name directly
+        android
+        lexbor_static  # <-- Lexbor C++ HTML parser
 )

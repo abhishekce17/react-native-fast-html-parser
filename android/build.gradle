@@ -99,11 +99,7 @@ android {
     }
   }
 
-  sourceSets {
-    main {
-      jniLibs.srcDirs = ["src/main/jniLibs"]
-    }
-  }
+
 
   buildFeatures {
     prefab true
